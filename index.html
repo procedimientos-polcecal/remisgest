@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Remises – Polysan / Polcecal</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#2563eb;--blue-d:#1d4ed8;--green:#10b981;--amber:#f59e0b;
+  --red:#ef4444;--bg:#f1f5f9;--card:#fff;--text:#1e293b;
+  --muted:#64748b;--border:#e2e8f0;--header:#1e293b;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Header ── */
+header{background:var(--header);color:#fff;height:54px;display:flex;align-items:center;gap:12px;padding:0 20px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+header .logo{font-size:22px}
+header h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
+header .sub{font-size:11px;color:#94a3b8;margin-left:auto}
+
+/* ── Nav ── */
+nav{background:#fff;border-bottom:1px solid var(--border);display:flex;padding:0 16px;overflow-x:auto}
+nav button{flex-shrink:0;padding:13px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
+nav button:hover{color:var(--blue)}
+nav button.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* ── Tabs ── */
+.tab{display:none;padding:20px}
+.tab.active{display:block}
+
+/* ── Layout Hoy ── */
+.hoy-layout{display:grid;grid-template-columns:380px 1fr;gap:16px;min-height:calc(100vh - 130px)}
+.left-panel{display:flex;flex-direction:column;gap:12px;overflow-y:auto;max-height:calc(100vh - 150px)}
+.map-wrap{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1);min-height:500px}
+#map{height:100%;min-height:500px}
+
+/* ── Controls bar ── */
+.controls{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.date-input{padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text)}
+
+/* ── Pill tabs ── */
+.pill-tabs{display:flex;background:#f1f5f9;border-radius:9px;padding:3px;gap:2px;margin-bottom:12px}
+.pill-tabs button{flex:1;padding:6px 10px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;background:none;color:var(--muted);transition:.15s}
+.pill-tabs button.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:16px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:12px}
+
+/* ── Buttons ── */
+.btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:5px;transition:.15s}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-d)}
+.btn-success{background:var(--green);color:#fff}
+.btn-amber{background:var(--amber);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-outline{background:#fff;color:var(--blue);border:1px solid var(--blue)}.btn-outline:hover{background:#eff6ff}
+.btn-ghost{background:none;color:var(--muted);border:1px solid var(--border)}.btn-ghost:hover{background:#f8fafc}
+.btn-sm{padding:4px 9px;font-size:11px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Attendance ── */
+.att-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;transition:.15s;margin-bottom:6px;user-select:none}
+.att-item:hover{border-color:var(--blue)}
+.att-item.on{border-color:var(--green);background:#f0fdf4}
+.att-check{width:18px;height:18px;border-radius:4px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px}
+.att-item.on .att-check{background:var(--green);border-color:var(--green);color:#fff}
+.att-name{font-size:13px;font-weight:500;flex:1}
+.att-addr{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.no-coords{font-size:10px;color:var(--amber);font-weight:600}
+
+/* ── Route cards ── */
+.route-card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow:hidden;margin-bottom:12px}
+.route-header{padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.v-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.route-header h3{font-size:13px;font-weight:600;flex:1}
+.route-stats{font-size:11px;color:var(--muted);text-align:right}
+.stops-list{padding:10px 14px}
+.stop-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #f8fafc;position:relative}
+.stop-row:last-child{border-bottom:none}
+.stop-num{width:20px;height:20px;border-radius:50%;background:#e2e8f0;color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.stop-factory-icon{background:#fef3c7;color:#d97706}
+.stop-name{font-size:12px;font-weight:500}
+.stop-addr{font-size:11px;color:var(--muted)}
+.connector{position:absolute;left:10px;top:26px;bottom:-6px;width:1px;background:#e2e8f0}
+.stop-row:last-child .connector{display:none}
+.route-actions{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px}
+
+/* ── Table ── */
+.tbl-wrap{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+table{width:100%;border-collapse:collapse}
+thead th{padding:11px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:#f8fafc;border-bottom:1px solid var(--border)}
+tbody td{padding:11px 14px;font-size:13px;border-bottom:1px solid #f8fafc}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#f8fafc}
+
+/* ── Badges ── */
+.badge{padding:2px 7px;border-radius:4px;font-size:11px;font-weight:500}
+.badge-green{background:#dcfce7;color:#16a34a}
+.badge-red{background:#fee2e2;color:#dc2626}
+.badge-amber{background:#fef3c7;color:#d97706}
+
+/* ── Vehicles grid ── */
+.v-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.v-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.1);border-left:4px solid var(--blue)}
+.v-card h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.v-card p{font-size:12px;color:var(--muted);margin-bottom:3px}
+.v-card-actions{display:flex;gap:6px;margin-top:12px}
+
+/* ── Modal ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal h2{font-size:17px;font-weight:700;margin-bottom:20px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--muted)}
+.form-control{width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text)}
+.form-control:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* ── Config ── */
+.config-section{max-width:560px}
+.config-section h2{font-size:15px;font-weight:600;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search{flex:1;min-width:160px;padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty .icon{font-size:44px;margin-bottom:12px}
+.empty h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px}
+.empty p{font-size:13px;margin-bottom:20px}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;background:#1e293b;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;z-index:9999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+#toast.show{display:block;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ── Spinner ── */
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Import zone ── */
+.import-zone{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;color:var(--muted);cursor:pointer;font-size:13px;transition:.15s;margin-bottom:16px}
+.import-zone:hover{border-color:var(--blue);color:var(--blue)}
+.template-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;margin-bottom:14px;flex-wrap:wrap}
+.template-bar span{font-size:12px;color:#0369a1;flex:1}
+
+/* ── Weekly Schedule ── */
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;background:#fff;border-radius:12px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.week-nav .week-label{font-size:14px;font-weight:600;color:var(--text)}
+.week-days{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.week-day-btn{flex-shrink:0;min-width:58px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:11px;font-weight:500;color:var(--muted);text-align:center;transition:.15s;line-height:1.4}
+.week-day-btn:hover{border-color:var(--blue);color:var(--blue)}
+.week-day-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.week-day-btn.has-plan:not(.active){border-color:var(--green);color:var(--green)}
+.week-day-btn.is-today:not(.active) strong{color:var(--blue)}
+.week-detail{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.trip-card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow:hidden;display:flex;flex-direction:column}
+.trip-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.trip-header h3{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.morning-h{background:#f0fdf4}
+.evening-h{background:#fefce8}
+.trip-body{padding:8px 14px;flex:1;overflow-y:auto;max-height:380px}
+.emp-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f8fafc}
+.emp-row:last-child{border-bottom:none}
+.emp-row-name{flex:1;font-size:12px;font-weight:500}
+.emp-warn{font-size:9px;color:var(--amber);margin-left:3px}
+.tog-btn{padding:3px 11px;border-radius:20px;border:none;cursor:pointer;font-size:11px;font-weight:600;transition:.15s;white-space:nowrap}
+.tog-on{background:#dcfce7;color:#16a34a}
+.tog-on:hover{background:#bbf7d0}
+.tog-off{background:#fee2e2;color:#dc2626}
+.tog-off:hover{background:#fecaca}
+.trip-footer{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.trip-generated{font-size:11px;color:var(--green);margin-left:auto;font-weight:600}
+
+/* ── Nav links as buttons ── */
+a.btn{text-decoration:none}
+
+/* ── Stop controls (reorder + move) ── */
+.stop-ctrl{display:flex;flex-direction:column;gap:2px;margin-left:6px;flex-shrink:0}
+.sctrl-btn{width:22px;height:22px;border:1px solid var(--border);border-radius:4px;background:#fff;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;padding:0;color:var(--muted);transition:.15s;line-height:1}
+.sctrl-btn:hover:not([disabled]){background:var(--blue);color:#fff;border-color:var(--blue)}
+.sctrl-btn[disabled]{opacity:.25;cursor:not-allowed}
+.sctrl-move{border-color:var(--blue);color:var(--blue);font-size:12px}
+.sctrl-move:hover{background:var(--blue)!important;color:#fff!important}
+.move-menu{display:none;gap:5px;flex-wrap:wrap;align-items:center;margin-top:5px;padding:5px 8px;background:#f0f9ff;border-radius:7px;border:1px solid #bae6fd}
+.move-menu.open{display:flex}
+.move-pill{border:none;border-radius:12px;color:#fff;cursor:pointer;font-size:10px;font-weight:600;padding:3px 10px;transition:.15s;white-space:nowrap}
+.move-pill:hover{opacity:.82;transform:scale(1.04)}
+
+/* ── Generating overlay ── */
+#gen-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#gen-overlay .gen-spin{width:52px;height:52px;border:5px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+#gen-overlay span{color:#fff;font-size:14px;font-weight:500;letter-spacing:.02em}
+
+/* ── Share ── */
+.btn-whatsapp{background:#25d366;color:#fff}.btn-whatsapp:hover{background:#1ebe5d}
+.share-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.share-msg{width:100%;height:150px;resize:vertical;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:11.5px;line-height:1.6;background:#f8fafc;font-family:'Segoe UI',sans-serif;color:var(--text)}
+.share-all-bar{display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;gap:8px}
+
+/* ── Print ── */
+@media print{
+  header,nav,.controls,.pill-tabs,.map-wrap,.hoy-layout .left-panel>.card:not(.print-only),.route-actions{display:none!important}
+  .hoy-layout{grid-template-columns:1fr!important}
+  .route-card{break-inside:avoid;box-shadow:none;border:1px solid #ccc}
+  .route-header{background:#f8fafc!important}
+}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .hoy-layout{grid-template-columns:1fr}
+  .map-wrap{min-height:300px}
+  #map{min-height:300px}
+  .week-detail{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="./logo-pp.png" alt="Logo" style="height:40px;width:40px;object-fit:contain;flex-shrink:0">
+  <h1>Gestión de Remises</h1>
+  <span class="sub">Polysan S.A. · Polcecal S.A.</span>
+</header>
+
+<nav id="main-nav">
+  <button onclick="showTab('hoy')" id="nav-hoy" class="active">📅 Hoy</button>
+  <button onclick="showTab('semana')" id="nav-semana">📆 Semana</button>
+  <button onclick="showTab('empleados')" id="nav-empleados">👥 Empleados</button>
+  <button onclick="showTab('vehiculos')" id="nav-vehiculos">🚗 Vehículos</button>
+  <button onclick="showTab('config')" id="nav-config">⚙️ Configuración</button>
+</nav>
+
+<!-- ══════════════ TAB HOY ══════════════ -->
+<div id="tab-hoy" class="tab active">
+  <div class="controls">
+    <input type="date" id="route-date" class="date-input" onchange="onDateChange()">
+    <button class="btn btn-success" onclick="generateRoutes('morning')">▲ Generar Ida</button>
+    <button class="btn btn-amber" onclick="generateRoutes('evening')">▼ Generar Vuelta</button>
+    <button class="btn btn-ghost btn-sm" onclick="clearRoutes()">Limpiar rutas</button>
+    <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('morning')">📤 Ida</button>
+    <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('evening')">📤 Vuelta</button>
+  </div>
+  <div class="hoy-layout">
+    <div class="left-panel">
+      <div class="pill-tabs" id="hoy-tabs">
+        <button class="active" onclick="hoyTab('asistencia')">Asistencia</button>
+        <button onclick="hoyTab('ida')">Rutas Ida</button>
+        <button onclick="hoyTab('vuelta')">Rutas Vuelta</button>
+      </div>
+
+      <div id="panel-asistencia">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span id="att-count" style="font-size:12px;color:var(--muted)"></span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="toggleAll(true)">Todos</button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleAll(false)">Ninguno</button>
+          </div>
+        </div>
+        <div id="att-list"></div>
+      </div>
+
+      <div id="panel-ida" style="display:none">
+        <div id="routes-morning"></div>
+      </div>
+      <div id="panel-vuelta" style="display:none">
+        <div id="routes-evening"></div>
+      </div>
+    </div>
+
+    <div class="map-wrap">
+      <div id="map"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TAB SEMANA ══════════════ -->
+<div id="tab-semana" class="tab">
+  <div class="week-nav">
+    <button class="btn btn-ghost btn-sm" onclick="shiftWeek(-1)">← Anterior</button>
+    <span class="week-label" id="week-label"></span>
+    <button class="btn btn-ghost btn-sm" onclick="shiftWeek(1)">Siguiente →</button>
+  </div>
+  <div class="week-days" id="week-days"></div>
+  <div class="week-detail" id="week-detail"></div>
+</div>
+
+<!-- ══════════════ TAB EMPLEADOS ══════════════ -->
+<div id="tab-empleados" class="tab">
+  <div class="template-bar">
+    <span>📥 Descargá la plantilla Excel, completala y volvé a importarla</span>
+    <button class="btn btn-outline btn-sm" onclick="downloadTemplate('employees')">⬇ Plantilla Excel</button>
+  </div>
+  <div class="toolbar">
+    <input type="text" class="search" id="emp-search" placeholder="Buscar empleado…" oninput="renderEmployees()">
+    <button class="btn btn-primary" onclick="openEmpModal()">+ Agregar</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('emp-file').click()">⬆ Importar</button>
+    <input type="file" id="emp-file" accept=".csv,.xlsx,.xls" onchange="importFile(this,'employees')" style="display:none">
+  </div>
+  <div class="import-zone" onclick="document.getElementById('emp-file').click()">
+    📂 Arrastrá o hacé clic para importar CSV o Excel<br>
+    <small style="opacity:.7">Columnas: <code>Nombre · Dirección · Teléfono</code></small>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>Nombre</th><th>Dirección</th><th>Coords</th><th>Estado</th><th>Acciones</th>
+      </tr></thead>
+      <tbody id="emp-tbody"></tbody>
+    </table>
+  </div>
+  <div id="emp-empty" class="empty" style="display:none">
+    <div class="icon">👥</div>
+    <h3>Sin empleados</h3>
+    <p>Agregá empleados manualmente, importá un archivo o descargá la plantilla Excel.</p>
+  </div>
+</div>
+
+<!-- ══════════════ TAB VEHÍCULOS ══════════════ -->
+<div id="tab-vehiculos" class="tab">
+  <div class="template-bar">
+    <span>📥 Descargá la plantilla Excel, completala y volvé a importarla</span>
+    <button class="btn btn-outline btn-sm" onclick="downloadTemplate('vehicles')">⬇ Plantilla Excel</button>
+  </div>
+  <div class="toolbar">
+    <span style="font-size:13px;color:var(--muted);flex:1">Configurá los vehículos disponibles para el reparto.</span>
+    <button class="btn btn-ghost" onclick="document.getElementById('veh-file').click()">⬆ Importar</button>
+    <input type="file" id="veh-file" accept=".csv,.xlsx,.xls" onchange="importFile(this,'vehicles')" style="display:none">
+    <button class="btn btn-primary" onclick="openVehModal()">+ Agregar vehículo</button>
+  </div>
+  <div class="v-grid" id="v-grid"></div>
+  <div id="v-empty" class="empty" style="display:none">
+    <div class="icon">🚗</div>
+    <h3>Sin vehículos</h3>
+    <p>Agregá al menos un remise para generar rutas.</p>
+    <button class="btn btn-primary" onclick="openVehModal()">+ Agregar vehículo</button>
+  </div>
+</div>
+
+<!-- ══════════════ TAB CONFIGURACIÓN ══════════════ -->
+<div id="tab-config" class="tab">
+  <div class="config-section">
+    <h2>📍 Ubicación de la Fábrica</h2>
+    <div class="form-group">
+      <label>Nombre del establecimiento</label>
+      <input class="form-control" id="cfg-name" placeholder="Ej: Fábrica Principal" oninput="saveConfig()">
+    </div>
+    <div class="form-group">
+      <label>Dirección</label>
+      <div class="form-row">
+        <input class="form-control" id="cfg-addr" placeholder="Ej: Av. San Martín 1234, Córdoba">
+        <button class="btn btn-primary" onclick="geocodeFactory()" id="cfg-geo-btn">Geocodificar</button>
+      </div>
+    </div>
+    <div id="cfg-coords" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
+    <div style="height:220px;border-radius:10px;overflow:hidden;margin-top:12px;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+      <div id="config-map" style="height:100%"></div>
+    </div>
+    <br>
+    <h2>🔍 Geocodificación</h2>
+    <div class="form-group">
+      <label>Ciudad / Localidad de referencia</label>
+      <input class="form-control" id="cfg-city" placeholder="Ej: Olavarría, Buenos Aires" oninput="saveConfig()">
+      <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">
+        Se agrega automáticamente a cada búsqueda de dirección para evitar geocodificar en ciudades equivocadas.
+      </small>
+    </div>
+    <br>
+    <h2>⚙️ Preferencias de Ruta</h2>
+    <div class="form-group">
+      <label>Velocidad promedio (km/h) <small style="color:var(--muted)">(solo como referencia; OSRM calcula tiempos reales)</small></label>
+      <input class="form-control" id="cfg-speed" type="number" value="40" min="10" max="120" style="width:100px" oninput="saveConfig()">
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL EMPLEADO ══════════════ -->
+<div class="overlay" id="emp-modal">
+  <div class="modal">
+    <h2 id="emp-modal-title">Agregar Empleado</h2>
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input class="form-control" id="emp-name" placeholder="Ej: Juan García">
+    </div>
+    <div class="form-group">
+      <label>Dirección</label>
+      <div class="form-row">
+        <input class="form-control" id="emp-addr" placeholder="Ej: Mitre 456, Buenos Aires">
+        <button class="btn btn-outline" onclick="geocodeEmp()" id="emp-geo-btn">🔍</button>
+      </div>
+    </div>
+    <div id="emp-geo-result" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
+    <div id="emp-map-wrap" style="display:none;margin-top:10px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:11px;font-weight:600;color:var(--muted)">📌 Validar ubicación — arrastrá el pin o hacé clic para corregir</span>
+        <button class="btn btn-ghost btn-sm" onclick="hideEmpMap()" style="padding:2px 7px;font-size:10px">✕ Cerrar mapa</button>
+      </div>
+      <div id="emp-modal-map" style="height:210px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border)"></div>
+      <div id="emp-map-coords" style="font-size:10px;color:var(--muted);margin-top:4px;text-align:right"></div>
+    </div>
+    <div class="form-group">
+      <label>Teléfono (opcional)</label>
+      <input class="form-control" id="emp-phone" placeholder="Ej: 351-555-1234">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="emp-active" checked style="width:16px;height:16px">
+      <label for="emp-active" style="margin:0;cursor:pointer">Empleado activo</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('emp-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEmployee()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL VEHÍCULO ══════════════ -->
+<div class="overlay" id="veh-modal">
+  <div class="modal">
+    <h2 id="veh-modal-title">Agregar Vehículo</h2>
+    <div class="form-group">
+      <label>Nombre / Identificación</label>
+      <input class="form-control" id="veh-name" placeholder="Ej: Remise 1 - Ford Transit">
+    </div>
+    <div class="form-group">
+      <label>Conductor</label>
+      <input class="form-control" id="veh-driver" placeholder="Ej: Carlos Rodríguez">
+    </div>
+    <div class="form-group">
+      <label>Capacidad (pasajeros)</label>
+      <input class="form-control" id="veh-cap" type="number" value="8" min="1" max="40">
+    </div>
+    <div class="form-group">
+      <label>Teléfono del conductor</label>
+      <input class="form-control" id="veh-phone" placeholder="Ej: 351-555-9876">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('veh-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveVehicle()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL COMPARTIR ══════════════ -->
+<div class="overlay" id="share-modal">
+  <div class="modal" style="max-width:540px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div id="share-icon" style="font-size:28px;flex-shrink:0">📤</div>
+      <div style="flex:1;min-width:0">
+        <h2 style="margin:0;font-size:16px" id="share-title">Compartir ruta</h2>
+        <div id="share-subtitle" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Mensaje (podés editarlo antes de enviar)</label>
+      <textarea class="share-msg" id="share-msg"></textarea>
+    </div>
+
+    <div class="form-group" style="margin-bottom:6px">
+      <label>📱 Número de WhatsApp (con código de país, sin + ni 0)</label>
+      <div style="display:flex;gap:8px">
+        <input class="form-control" id="share-phone" placeholder="Ej: 5493516001234  (ARG = 549...)">
+        <button class="btn btn-whatsapp" onclick="doWhatsApp(true)">Enviar</button>
+      </div>
+      <small style="color:var(--muted);font-size:10px;margin-top:3px;display:block">
+        Argentina: 549 + 10 dígitos sin 0 inicial. Ej: 549<b>351</b>6001234
+      </small>
+    </div>
+
+    <button class="btn btn-whatsapp" style="width:100%;margin-bottom:10px" onclick="doWhatsApp(false)">
+      📱 Elegir contacto en WhatsApp
+    </button>
+
+    <div class="share-actions">
+      <button class="btn btn-outline" onclick="doShareEmail()">📧 Abrir en Email</button>
+      <button class="btn btn-primary" onclick="doShareCopy()">📋 Copiar mensaje</button>
+    </div>
+
+    <div class="modal-footer" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal('share-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="gen-overlay">
+  <div class="gen-spin"></div>
+  <span id="gen-overlay-msg">Calculando rutas…</span>
+</div>
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════
+const COLORS = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+const DAY_NAMES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+let S = {
+  factory:  { name:'Fábrica', address:'', lat:null, lng:null },
+  employees: [],
+  vehicles:  [],
+  attendance:{},   // 'YYYY-MM-DD' -> [id,...]
+  routes:    {},   // 'YYYY-MM-DD' -> {morning:[...], evening:[...]}
+  weekPlan:  {},   // 'YYYY-MM-DD' -> {morning:[ids], evening:[ids]}
+  speed: 40,
+  city: ''          // ciudad/localidad de referencia para geocodificación
+};
+
+let editEmpId = null, editVehId = null;
+let map = null, cfgMap = null, mapLayers = [], cfgMarker = null;
+let empModalMap = null, empMarker = null;
+let weekOffset = 0, selectedWeekDate = null;
+
+// ═══════════════════════════════════════════════
+//  PERSISTENCE
+// ═══════════════════════════════════════════════
+function save() {
+  try { localStorage.setItem('rg_v3', JSON.stringify(S)); } catch(e){}
+}
+function load() {
+  try {
+    const d = localStorage.getItem('rg_v3');
+    if (d) S = Object.assign({}, S, JSON.parse(d));
+    // migrate from v2
+    if (!d) {
+      const old = localStorage.getItem('rg_v2');
+      if (old) { S = Object.assign({}, S, JSON.parse(old)); save(); }
+    }
+  } catch(e){}
+}
+
+// ═══════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#main-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'hoy')       setTimeout(() => map && map.invalidateSize(), 50);
+  if (name === 'semana')    renderWeekView();
+  if (name === 'empleados') renderEmployees();
+  if (name === 'vehiculos') renderVehicles();
+  if (name === 'config')    loadConfig();
+}
+
+function hoyTab(name) {
+  document.querySelectorAll('#hoy-tabs button').forEach((b,i) => {
+    b.classList.toggle('active', ['asistencia','ida','vuelta'][i] === name);
+  });
+  document.getElementById('panel-asistencia').style.display = name==='asistencia' ? '' : 'none';
+  document.getElementById('panel-ida').style.display        = name==='ida'         ? '' : 'none';
+  document.getElementById('panel-vuelta').style.display     = name==='vuelta'      ? '' : 'none';
+  setTimeout(() => map && map.invalidateSize(), 50);
+}
+
+// ═══════════════════════════════════════════════
+//  MAP
+// ═══════════════════════════════════════════════
+// CartoDB Voyager: aspecto similar a Google Maps, gratuito, sin API key
+const CARTO_TILES = {
+  url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  opts: {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
+  }
+};
+function initMap() {
+  const c = S.factory.lat ? [S.factory.lat, S.factory.lng] : [-34.6037,-58.3816];
+  map = L.map('map').setView(c, 12);
+  L.tileLayer(CARTO_TILES.url, CARTO_TILES.opts).addTo(map);
+}
+function initCfgMap() {
+  if (cfgMap) return;
+  const c = S.factory.lat ? [S.factory.lat, S.factory.lng] : [-34.6037,-58.3816];
+  cfgMap = L.map('config-map').setView(c, 13);
+  L.tileLayer(CARTO_TILES.url, CARTO_TILES.opts).addTo(cfgMap);
+  if (S.factory.lat) cfgMarker = L.marker([S.factory.lat, S.factory.lng]).addTo(cfgMap).bindPopup(S.factory.name||'Fábrica').openPopup();
+  cfgMap.on('click', e => {
+    S.factory.lat = e.latlng.lat; S.factory.lng = e.latlng.lng;
+    if (cfgMarker) cfgMap.removeLayer(cfgMarker);
+    cfgMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(cfgMap).bindPopup('Fábrica').openPopup();
+    document.getElementById('cfg-coords').textContent = `📍 ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+    save();
+  });
+}
+// ── Mapa de validación de empleados ──
+function ensureEmpMap() {
+  if (empModalMap) return;
+  const c = S.factory.lat ? [S.factory.lat, S.factory.lng] : [-34.6037, -58.3816];
+  empModalMap = L.map('emp-modal-map', {zoomControl:true}).setView(c, 14);
+  L.tileLayer(CARTO_TILES.url, CARTO_TILES.opts).addTo(empModalMap);
+  empModalMap.on('click', e => {
+    setEmpMarker(e.latlng.lat, e.latlng.lng);
+    setEmpGeoBtn(e.latlng.lat, e.latlng.lng);
+    document.getElementById('emp-geo-result').innerHTML =
+      `<span style="color:var(--green)">📌 Ubicación ajustada manualmente</span>`;
+  });
+}
+function setEmpMarker(lat, lng) {
+  if (empMarker) empModalMap.removeLayer(empMarker);
+  empMarker = L.marker([lat, lng], {draggable:true}).addTo(empModalMap)
+    .bindTooltip('Arrastrá para ajustar', {permanent:false, direction:'top'});
+  empMarker.on('dragend', () => {
+    const p = empMarker.getLatLng();
+    setEmpGeoBtn(p.lat, p.lng);
+    document.getElementById('emp-geo-result').innerHTML =
+      `<span style="color:var(--green)">📌 Posición ajustada</span>`;
+  });
+}
+function setEmpGeoBtn(lat, lng) {
+  document.getElementById('emp-geo-btn').dataset.lat = lat;
+  document.getElementById('emp-geo-btn').dataset.lng = lng;
+  document.getElementById('emp-map-coords').textContent = `Lat ${(+lat).toFixed(6)}, Lng ${(+lng).toFixed(6)}`;
+}
+function showEmpMap(lat, lng) {
+  document.getElementById('emp-map-wrap').style.display = '';
+  ensureEmpMap();
+  empModalMap.setView([lat, lng], 16);
+  setEmpMarker(lat, lng);
+  setEmpGeoBtn(lat, lng);
+  setTimeout(() => empModalMap && empModalMap.invalidateSize(), 120);
+}
+function hideEmpMap() {
+  document.getElementById('emp-map-wrap').style.display = 'none';
+}
+
+function clearMapLayers() { mapLayers.forEach(l => map.removeLayer(l)); mapLayers = []; }
+function renderMapRoutes(routes, type) {
+  clearMapLayers();
+  if (!routes || !routes.length) return;
+  const allPts = [];
+  routes.forEach((route, ri) => {
+    const color = COLORS[ri % COLORS.length];
+    if (route.geometry && route.geometry.coordinates && route.geometry.coordinates.length > 1) {
+      // OSRM GeoJSON: coordinates are [lng, lat]
+      const latlngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+      mapLayers.push(L.polyline(latlngs, {color, weight:5, opacity:.8, dashArray:type==='morning'?'10,5':null}).addTo(map));
+    } else if (route.stops.length > 1) {
+      // Fallback straight-line
+      mapLayers.push(L.polyline(route.stops.map(s=>[s.lat,s.lng]),{color,weight:4,opacity:.7,dashArray:type==='morning'?'8,4':null}).addTo(map));
+    }
+    route.stops.forEach((stop, si) => {
+      const isF = stop.isFactory;
+      const icon = L.divIcon({
+        html:`<div style="background:${isF?'#f59e0b':color};color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${isF?'14':'12'}px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">${isF?'🏭':si+1}</div>`,
+        className:'',iconSize:[28,28],iconAnchor:[14,14]
+      });
+      mapLayers.push(L.marker([stop.lat,stop.lng],{icon}).addTo(map).bindPopup(`<b>${stop.name}</b><br><small>${stop.address||''}</small>`));
+      allPts.push([stop.lat,stop.lng]);
+    });
+  });
+  if (allPts.length) map.fitBounds(allPts,{padding:[30,30]});
+}
+
+// ═══════════════════════════════════════════════
+//  GEOCODING
+// ═══════════════════════════════════════════════
+async function geocode(address) {
+  try {
+    // Append city context so "Av. Circunvalación 1545" resuelve en la ciudad correcta
+    const query = S.city ? `${address}, ${S.city}` : address;
+    let url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ar&q=${encodeURIComponent(query)}`;
+    // Bias de proximidad: prioriza resultados cerca de la fábrica (±0.4 grados ≈ 40 km)
+    if (S.factory.lat) {
+      const d = 0.4;
+      const vb = `${S.factory.lng-d},${S.factory.lat+d},${S.factory.lng+d},${S.factory.lat-d}`;
+      url += `&viewbox=${vb}&bounded=0`;
+    }
+    const r = await fetch(url, {headers:{'Accept-Language':'es'}});
+    const data = await r.json();
+    if (data.length) return {lat:+data[0].lat, lng:+data[0].lon, display:data[0].display_name};
+  } catch(e){}
+  return null;
+}
+async function geocodeFactory() {
+  const addr = document.getElementById('cfg-addr').value.trim();
+  if (!addr) { toast('Ingresá una dirección'); return; }
+  const btn = document.getElementById('cfg-geo-btn');
+  btn.innerHTML='<span class="spin"></span>'; btn.disabled=true;
+  const res = await geocode(addr);
+  btn.innerHTML='Geocodificar'; btn.disabled=false;
+  if (res) {
+    S.factory.lat=res.lat; S.factory.lng=res.lng;
+    document.getElementById('cfg-coords').textContent=`📍 ${res.lat.toFixed(5)}, ${res.lng.toFixed(5)}`;
+    save();
+    if (cfgMap) {
+      cfgMap.setView([res.lat,res.lng],15);
+      if (cfgMarker) cfgMap.removeLayer(cfgMarker);
+      cfgMarker = L.marker([res.lat,res.lng]).addTo(cfgMap).bindPopup(S.factory.name||'Fábrica').openPopup();
+    }
+    toast('✅ Ubicación de fábrica guardada');
+  } else toast('No se pudo geocodificar la dirección');
+}
+async function geocodeEmp() {
+  const addr = document.getElementById('emp-addr').value.trim();
+  if (!addr) { toast('Ingresá una dirección'); return; }
+  const btn = document.getElementById('emp-geo-btn');
+  btn.innerHTML='<span class="spin"></span>'; btn.disabled=true;
+  const res = await geocode(addr);
+  btn.innerHTML='🔍'; btn.disabled=false;
+  const info = document.getElementById('emp-geo-result');
+  if (res) {
+    info.innerHTML=`✅ <span style="color:var(--green)">${res.display.split(',').slice(0,3).join(', ')}</span>`;
+    btn.dataset.lat=res.lat; btn.dataset.lng=res.lng;
+    showEmpMap(res.lat, res.lng);   // mostrar mapa de validación
+  } else {
+    info.innerHTML=`<span style="color:var(--red)">No se encontró la dirección. Podés hacer clic en el mapa para marcarla a mano.</span>`;
+    delete btn.dataset.lat; delete btn.dataset.lng;
+    // Mostrar mapa de todas formas para ubicación manual
+    if (!empModalMap) {
+      document.getElementById('emp-map-wrap').style.display = '';
+      ensureEmpMap();
+      setTimeout(() => empModalMap && empModalMap.invalidateSize(), 120);
+    }
+  }
+}
+async function geocodeAllMissing() {
+  const missing = S.employees.filter(e => !e.lat && e.address);
+  if (!missing.length) { toast('Todos los empleados ya tienen coordenadas'); return; }
+  toast(`Geocodificando ${missing.length} empleados…`);
+  for (const e of missing) {
+    const res = await geocode(e.address);
+    if (res) { e.lat=res.lat; e.lng=res.lng; }
+    await new Promise(r => setTimeout(r,1100));
+  }
+  save(); renderEmployees(); renderAttendance();
+  toast('✅ Geocodificación completa');
+}
+
+// ═══════════════════════════════════════════════
+//  ALGORITHM – Haversine (fallback)
+// ═══════════════════════════════════════════════
+function dist(a,b) {
+  const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function nearestNeighbor(start, points) {
+  let cur=start, rem=[...points], route=[];
+  while (rem.length) {
+    let bi=0,bd=Infinity;
+    rem.forEach((p,i)=>{ const d=dist(cur,p); if(d<bd){bd=d;bi=i;} });
+    route.push(rem[bi]); cur=rem[bi]; rem.splice(bi,1);
+  }
+  return route;
+}
+function kMeans(points, k, iters=15) {
+  if (k>=points.length) return points.map((_,i)=>i%k);
+  let centroids=[points[0]];
+  while (centroids.length<k) {
+    const ds=points.map(p=>Math.min(...centroids.map(c=>dist(p,c))));
+    const total=ds.reduce((a,b)=>a+b,0);
+    let r=Math.random()*total;
+    for (let i=0;i<points.length;i++){r-=ds[i];if(r<=0){centroids.push(points[i]);break;}}
+    if (centroids.length<k) centroids.push(points[centroids.length]);
+  }
+  let assign=new Array(points.length).fill(0);
+  for (let it=0;it<iters;it++) {
+    assign=points.map(p=>{let bi=0,bd=Infinity;centroids.forEach((c,i)=>{const d=dist(p,c);if(d<bd){bd=d;bi=i;}});return bi;});
+    centroids=centroids.map((_,ci)=>{
+      const cl=points.filter((_,pi)=>assign[pi]===ci);
+      if(!cl.length) return centroids[ci];
+      return {lat:cl.reduce((s,p)=>s+p.lat,0)/cl.length,lng:cl.reduce((s,p)=>s+p.lng,0)/cl.length};
+    });
+  }
+  return assign;
+}
+function routeDist(stops){let t=0;for(let i=0;i<stops.length-1;i++)t+=dist(stops[i],stops[i+1]);return t;}
+
+// ═══════════════════════════════════════════════
+//  OSRM – Real road routing
+// ═══════════════════════════════════════════════
+const OSRM = 'https://router.project-osrm.org';
+
+async function getDistanceMatrix(points) {
+  // Returns NxN matrices {durations (sec), distances (m)} or null on error
+  const coords = points.map(p=>`${p.lng},${p.lat}`).join(';');
+  try {
+    const r = await fetch(`${OSRM}/table/v1/driving/${coords}?annotations=duration,distance`);
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    if (d.code !== 'Ok') throw 0;
+    return {durations: d.durations, distances: d.distances};
+  } catch(e) { return null; }
+}
+
+async function getRouteGeometry(waypoints) {
+  // Returns {geometry (GeoJSON), distance (km), duration (min)} or null
+  const coords = waypoints.map(p=>`${p.lng},${p.lat}`).join(';');
+  const base = `${OSRM}/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const parse = d => d.code==='Ok' && d.routes.length
+    ? {geometry:d.routes[0].geometry, distance:d.routes[0].distance/1000, duration:d.routes[0].duration/60}
+    : null;
+  try {
+    // Intento 1: continue_straight=true evita giros en U en paradas intermedias
+    const r1 = await fetch(base + '&continue_straight=true');
+    if (r1.ok) { const d1 = await r1.json(); const res = parse(d1); if (res) return res; }
+    // Fallback: sin la restricción (por si OSRM no puede evitar el giro)
+    const r2 = await fetch(base);
+    if (!r2.ok) throw 0;
+    const d2 = await r2.json();
+    return parse(d2);
+  } catch(e) { return null; }
+}
+
+// Nearest-neighbor TSP using road duration matrix
+// startIdx and empIndices refer to positions in the allPoints array passed to getDistanceMatrix
+function nearestNeighborMatrix(startIdx, empIndices, durationMatrix) {
+  let curIdx = startIdx;
+  const rem = [...empIndices];
+  const ordered = [];
+  while (rem.length) {
+    let bestI = 0, bestD = Infinity;
+    rem.forEach((empIdx, i) => {
+      const d = durationMatrix[curIdx][empIdx];
+      if (d < bestD) { bestD = d; bestI = i; }
+    });
+    ordered.push(rem[bestI]);
+    curIdx = rem[bestI];
+    rem.splice(bestI, 1);
+  }
+  return ordered;
+}
+
+function setGenerating(on, msg) {
+  const el = document.getElementById('gen-overlay');
+  el.style.display = on ? 'flex' : 'none';
+  if (msg) document.getElementById('gen-overlay-msg').textContent = msg;
+}
+
+// ═══════════════════════════════════════════════
+//  ROUTE GENERATION
+// ═══════════════════════════════════════════════
+async function generateRoutes(type, employeeOverride) {
+  const date = document.getElementById('route-date').value;
+  if (!date) { toast('Seleccioná una fecha'); return null; }
+  if (!S.factory.lat) { toast('Configurá la ubicación de la fábrica primero'); return null; }
+  if (!S.vehicles.length) { toast('Agregá al menos un vehículo'); showTab('vehiculos'); return null; }
+
+  const presentIds = employeeOverride || S.attendance[date] || [];
+  if (!presentIds.length) { toast('Marcá qué empleados vienen hoy en Asistencia'); return null; }
+
+  const emps = S.employees.filter(e => presentIds.includes(e.id) && e.lat && e.lng);
+  const noCoords = S.employees.filter(e => presentIds.includes(e.id) && (!e.lat||!e.lng));
+  if (!emps.length) { toast('Los empleados marcados no tienen coordenadas. Geocodificá primero.'); return null; }
+  if (noCoords.length) toast(`⚠️ ${noCoords.length} empleado(s) sin coordenadas serán ignorados`);
+
+  setGenerating(true, `Obteniendo matriz de distancias para ${emps.length} empleados…`);
+
+  const factory = {...S.factory, name:S.factory.name||'Fábrica', isFactory:true};
+  const k = Math.min(S.vehicles.length, emps.length);
+
+  // allPoints: factory at index 0, employees at 1..N
+  const allPoints = [factory, ...emps];
+
+  // Road duration matrix (factory + all employees)
+  let durationMatrix = null;
+  const osrmTable = await getDistanceMatrix(allPoints);
+  if (osrmTable) durationMatrix = osrmTable.durations;
+
+  // Cluster employees geographically into k groups
+  const assign = k===1 ? emps.map(()=>0) : kMeans(emps, k);
+
+  const routes = [];
+  for (let vi=0; vi<k; vi++) {
+    const grpEmps = emps.filter((_,i) => assign[i]===vi);
+    if (!grpEmps.length) continue;
+    const veh = S.vehicles[vi];
+
+    // Indices inside allPoints for this group's employees
+    const empIdxInAll = grpEmps.map(e => emps.indexOf(e) + 1);
+
+    let orderedEmps;
+    if (durationMatrix) {
+      // TSP using real road durations — NN starts from factory
+      const orderedIdx = nearestNeighborMatrix(0, empIdxInAll, durationMatrix);
+      orderedEmps = orderedIdx.map(i => emps[i - 1]);
+    } else {
+      orderedEmps = nearestNeighbor(factory, grpEmps);
+    }
+
+    // Morning (pickup): driver starts far, works toward factory → reverse so
+    // the farthest employee is stop 1 and the nearest is last before factory.
+    // Evening (dropoff): factory is first, driver goes nearest→farthest → no reverse.
+    if (type === 'morning') orderedEmps = orderedEmps.slice().reverse();
+
+    const stops = type==='morning'
+      ? [...orderedEmps.map(e=>({...e,isFactory:false})), factory]
+      : [factory, ...orderedEmps.map(e=>({...e,isFactory:false}))];
+
+    // Real road geometry + actual distance/time
+    setGenerating(true, `Trazando recorrido del vehículo ${vi+1} de ${k}…`);
+    let km, min, geometry = null;
+    const routeRes = await getRouteGeometry(stops);
+    if (routeRes) {
+      km    = routeRes.distance.toFixed(1);
+      min   = Math.round(routeRes.duration);
+      geometry = routeRes.geometry;
+    } else {
+      km  = routeDist(stops).toFixed(1);
+      min = Math.round(km / (S.speed||40) * 60);
+    }
+
+    routes.push({vehicle:veh, stops, type, km, min, geometry});
+  }
+
+  setGenerating(false);
+  if (!S.routes[date]) S.routes[date]={};
+  S.routes[date][type]=routes;
+  save();
+  renderRouteCards(routes, type);
+  renderMapRoutes(routes, type);
+  hoyTab(type==='morning'?'ida':'vuelta');
+  toast(`✅ ${routes.length} ruta(s) generadas`);
+  return routes;
+}
+
+function clearRoutes() {
+  clearMapLayers();
+  document.getElementById('routes-morning').innerHTML='';
+  document.getElementById('routes-evening').innerHTML='';
+  hoyTab('asistencia');
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER ROUTES
+// ═══════════════════════════════════════════════
+function renderRouteCards(routes, type) {
+  const container = document.getElementById(type==='morning'?'routes-morning':'routes-evening');
+  if (!routes||!routes.length) {
+    container.innerHTML='<div class="empty"><div class="icon">🗺️</div><h3>Sin rutas</h3><p>Generá las rutas desde los botones de arriba.</p></div>';
+    return;
+  }
+  container.innerHTML = routes.map((r,ri)=>{
+    const color = COLORS[ri%COLORS.length];
+    const isOsrm = !!r.geometry;
+
+    const stopsHtml = r.stops.map((s,si) => {
+      if (s.isFactory) return `
+        <div class="stop-row">
+          <div class="connector"></div>
+          <div class="stop-num stop-factory-icon">🏭</div>
+          <div style="flex:1;min-width:0"><div class="stop-name">${escHtml(s.name)}</div><div class="stop-addr">${escHtml(s.address||'')}</div></div>
+        </div>`;
+
+      const canUp   = si > 0 && !r.stops[si-1].isFactory;
+      const canDown = si < r.stops.length-1 && !r.stops[si+1].isFactory;
+
+      // Destination pills for other routes
+      const pills = routes.length > 1
+        ? routes.map((or,ori) => ori===ri ? '' :
+            `<button class="move-pill" style="background:${COLORS[ori%COLORS.length]}"
+               onclick="moveEmpToRoute(${ri},${si},${ori},'${type}')">→ ${escHtml(or.vehicle.name)}</button>`
+          ).join('')
+        : '';
+
+      const moveMenu = routes.length > 1
+        ? `<div class="move-menu" id="mv-${ri}-${si}">
+             <span style="font-size:10px;color:var(--muted);font-weight:600">Mover a:</span>${pills}
+           </div>` : '';
+
+      const moveBtn = routes.length > 1
+        ? `<button class="sctrl-btn sctrl-move" onclick="toggleMoveMenu('${ri}-${si}')" title="Cambiar de remis">⇄</button>` : '';
+
+      return `
+        <div class="stop-row">
+          <div class="connector"></div>
+          <div class="stop-num">${si+1}</div>
+          <div style="flex:1;min-width:0">
+            <div class="stop-name">${escHtml(s.name)}</div>
+            <div class="stop-addr">${escHtml(s.address||'')}</div>
+            ${moveMenu}
+          </div>
+          <div class="stop-ctrl">
+            <button class="sctrl-btn" ${canUp?`onclick="reorderStop(${ri},${si},-1,'${type}')"`:'disabled'} title="Subir">▲</button>
+            <button class="sctrl-btn" ${canDown?`onclick="reorderStop(${ri},${si},1,'${type}')"`:'disabled'} title="Bajar">▼</button>
+            ${moveBtn}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Google Maps deep link
+    const first=r.stops[0], last=r.stops[r.stops.length-1];
+    const midStops=r.stops.slice(1,-1).slice(0,9);
+    const gmWp=midStops.map(s=>`${s.lat},${s.lng}`).join('|');
+    const gmUrl=`https://www.google.com/maps/dir/?api=1`
+      +`&origin=${first.lat},${first.lng}`
+      +`&destination=${last.lat},${last.lng}`
+      +(gmWp?`&waypoints=${encodeURIComponent(gmWp)}`:'')
+      +`&travelmode=driving`;
+    const wazeUrl=`https://waze.com/ul?ll=${last.lat}%2C${last.lng}&navigate=yes&zoom=17`;
+
+    const empCount = r.stops.filter(s=>!s.isFactory).length;
+    return `<div class="route-card">
+      <div class="route-header">
+        <div class="v-dot" style="background:${color}">${ri+1}</div>
+        <h3>${escHtml(r.vehicle.name)}</h3>
+        <div class="route-stats">${r.km} km · ~${r.min} min${isOsrm?' <span title="Calculado por ruta real">🛣️</span>':''}<br><small>${empCount} pasajero${empCount!==1?'s':''}</small></div>
+      </div>
+      <div class="stops-list">${stopsHtml}</div>
+      <div class="route-actions" style="flex-wrap:wrap;gap:6px">
+        <a href="${gmUrl}" target="_blank" class="btn btn-primary btn-sm">📍 Google Maps</a>
+        <a href="${wazeUrl}" target="_blank" class="btn btn-outline btn-sm">📱 Waze</a>
+        <button class="btn btn-whatsapp btn-sm" onclick="openShareRoute(${ri},'${type}')">📤 Compartir</button>
+        <button class="btn btn-ghost btn-sm" onclick="printRoute(${ri},'${type}')">🖨️ Imprimir</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyRouteText(${ri},'${type}')">📋 Copiar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  MANUAL ROUTE EDITING
+// ═══════════════════════════════════════════════
+function toggleMoveMenu(key) {
+  const el = document.getElementById(`mv-${key}`);
+  if (el) el.classList.toggle('open');
+}
+
+function reorderStop(routeIdx, stopIdx, dir, type) {
+  const date = document.getElementById('route-date').value;
+  const routes = S.routes[date]?.[type];
+  if (!routes) return;
+  const stops = routes[routeIdx].stops;
+  const newIdx = stopIdx + dir;
+  if (newIdx < 0 || newIdx >= stops.length || stops[newIdx].isFactory) return;
+  [stops[stopIdx], stops[newIdx]] = [stops[newIdx], stops[stopIdx]];
+  routes[routeIdx].geometry = null;
+  save();
+  renderRouteCards(routes, type);
+  renderMapRoutes(routes, type);
+  refreshRouteGeometry(routeIdx, routes, type, date);
+}
+
+function moveEmpToRoute(fromIdx, stopIdx, toIdx, type) {
+  const date = document.getElementById('route-date').value;
+  const routes = S.routes[date]?.[type];
+  if (!routes) return;
+
+  // Extraer parada del origen
+  const [stop] = routes[fromIdx].stops.splice(stopIdx, 1);
+
+  // Insertar en destino, antes del marcador de fábrica
+  const toStops = routes[toIdx].stops;
+  const fi = toStops.findIndex(s => s.isFactory);
+  toStops.splice(fi !== -1 ? fi : toStops.length, 0, stop);
+
+  // Guardar referencias antes de filtrar
+  const fromRoute = routes[fromIdx];
+  const toRoute   = routes[toIdx];
+  fromRoute.geometry = null;
+  toRoute.geometry   = null;
+
+  // Eliminar rutas sin empleados
+  const active = routes.filter(r => r.stops.some(s => !s.isFactory));
+  S.routes[date][type] = active;
+  save();
+  renderRouteCards(active, type);
+  renderMapRoutes(active, type);
+  toast(`✅ Empleado movido a ${toRoute.vehicle.name}`);
+
+  // Recalcular geometría de las rutas afectadas
+  active.forEach((r, i) => {
+    if (r === fromRoute || r === toRoute) refreshRouteGeometry(i, active, type, date);
+  });
+}
+
+async function refreshRouteGeometry(routeIdx, routes, type, date) {
+  const route = routes[routeIdx];
+  if (!route || route.stops.length < 2) return;
+  const result = await getRouteGeometry(route.stops);
+  if (result) {
+    route.km       = result.distance.toFixed(1);
+    route.min      = Math.round(result.duration);
+    route.geometry = result.geometry;
+    save();
+    renderRouteCards(routes, type);
+    renderMapRoutes(routes, type);
+  }
+}
+
+function loadSavedRoutes() {
+  const date = document.getElementById('route-date').value;
+  if (!date||!S.routes[date]) return;
+  const dr=S.routes[date];
+  if (dr.morning) { renderRouteCards(dr.morning,'morning'); renderMapRoutes(dr.morning,'morning'); }
+  if (dr.evening) renderRouteCards(dr.evening,'evening');
+}
+
+// ═══════════════════════════════════════════════
+//  PRINT / COPY
+// ═══════════════════════════════════════════════
+function printRoute(idx, type) {
+  const date=document.getElementById('route-date').value;
+  const routes=S.routes[date]?.[type];
+  if (!routes||!routes[idx]) return;
+  const r=routes[idx], label=type==='morning'?'IDA (Búsqueda)':'VUELTA (Retorno)';
+  const stopsHtml=r.stops.map((s,si)=>
+    `<tr><td style="font-size:18px;font-weight:700;text-align:center;padding:8px">${s.isFactory?'🏭':si+1}</td>
+     <td style="padding:8px;font-weight:600">${escHtml(s.name)}</td>
+     <td style="padding:8px;color:#555">${escHtml(s.address||'')}</td></tr>`).join('');
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hoja de Ruta</title>
+    <style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}h2{font-size:16px;color:#555}
+    table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#f1f5f9;padding:8px;text-align:left;font-size:13px}
+    td{border-bottom:1px solid #e2e8f0}</style></head><body>
+    <h1>🚗 Hoja de Ruta — ${label}</h1>
+    <h2>${escHtml(r.vehicle.name)}${r.vehicle.driver?' | '+escHtml(r.vehicle.driver):''}</h2>
+    <p style="font-size:13px;color:#555">Fecha: <b>${date}</b> · ${r.km} km · ~${r.min} min</p>
+    <table><thead><tr><th>#</th><th>Nombre</th><th>Dirección</th></tr></thead><tbody>${stopsHtml}</tbody></table>
+    </body></html>`);
+  w.document.close(); w.print();
+}
+function copyRouteText(idx, type) {
+  const date=document.getElementById('route-date').value;
+  const routes=S.routes[date]?.[type];
+  if (!routes||!routes[idx]) return;
+  const r=routes[idx], label=type==='morning'?'IDA':'VUELTA';
+  const lines=[`🚗 RUTA ${label} — ${date}`,`Vehículo: ${r.vehicle.name}`,
+    r.vehicle.driver?`Conductor: ${r.vehicle.driver}`:'','',
+    ...r.stops.map((s,si)=>`${s.isFactory?'🏭':si+1}. ${s.name}${s.address?' — '+s.address:''}`)
+  ].filter(Boolean).join('\n');
+  navigator.clipboard.writeText(lines).then(()=>toast('📋 Ruta copiada al portapapeles'));
+}
+
+// ═══════════════════════════════════════════════
+//  SHARE (WhatsApp / Email / Copiar)
+// ═══════════════════════════════════════════════
+let _shareMsg = '';
+
+function _gmLink(route) {
+  const first = route.stops[0], last = route.stops[route.stops.length-1];
+  const mid = route.stops.slice(1,-1).slice(0,9).map(s=>`${s.lat},${s.lng}`).join('|');
+  return `https://www.google.com/maps/dir/?api=1&origin=${first.lat},${first.lng}&destination=${last.lat},${last.lng}${mid?'&waypoints='+encodeURIComponent(mid):''}&travelmode=driving`;
+}
+
+function buildRouteMsg(route, date, type) {
+  const label  = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
+  const lines  = [
+    `🚗 *${label.toUpperCase()}*`,
+    `📅 Fecha: ${date}`,
+    `🚌 Vehículo: *${route.vehicle.name}*`,
+    route.vehicle.driver ? `👤 Conductor: ${route.vehicle.driver}` : null,
+    route.vehicle.phone  ? `📞 Tel: ${route.vehicle.phone}` : null,
+    '',
+    '📍 *Recorrido:*',
+    ...route.stops.map((s,si) =>
+      s.isFactory
+        ? `🏭 ${s.name}${s.address?' – '+s.address:''}`
+        : `${si+1}. *${s.name}*${s.address?'\n   📍 '+s.address:''}`
+    ),
+    '',
+    `📏 ${route.km} km · ~${route.min} min`,
+    '',
+    `🗺️ Google Maps:\n${_gmLink(route)}`
+  ];
+  return lines.filter(l=>l!==null).join('\n');
+}
+
+function buildDayMsg(date, type) {
+  const routes = S.routes[date]?.[type];
+  if (!routes||!routes.length) return null;
+  const label   = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
+  const factory = S.factory.name || 'Fábrica';
+  const lines   = [
+    `📤 *RUTAS ${label.toUpperCase()}*`,
+    `📅 ${date}  ·  🏭 ${factory}`,
+    '━━━━━━━━━━━━━━━━━━',
+  ];
+  routes.forEach((r, ri) => {
+    lines.push('');
+    lines.push(`🚗 *${r.vehicle.name}*${r.vehicle.driver?' – '+r.vehicle.driver:''}`);
+    r.stops.forEach((s,si) =>
+      lines.push(s.isFactory
+        ? `   🏭 ${s.name}`
+        : `   ${si+1}. ${s.name}${s.address?' ('+s.address+')':''}`)
+    );
+    lines.push(`   📏 ${r.km} km · ~${r.min} min`);
+    lines.push(`   🗺️ ${_gmLink(r)}`);
+  });
+  return lines.join('\n');
+}
+
+function _openShareModal(msg, title, subtitle, phone='') {
+  _shareMsg = msg;
+  document.getElementById('share-title').textContent    = title;
+  document.getElementById('share-subtitle').textContent = subtitle;
+  document.getElementById('share-msg').value            = msg;
+  document.getElementById('share-phone').value          = _cleanPhone(phone);
+  openModal('share-modal');
+}
+
+function openShareRoute(routeIdx, type) {
+  const date   = document.getElementById('route-date').value;
+  const routes = S.routes[date]?.[type];
+  if (!routes||!routes[routeIdx]) { toast('No hay ruta guardada'); return; }
+  const r      = routes[routeIdx];
+  const color  = COLORS[routeIdx % COLORS.length];
+  document.getElementById('share-icon').innerHTML =
+    `<div style="width:34px;height:34px;background:${color};border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px">🚗</div>`;
+  _openShareModal(
+    buildRouteMsg(r, date, type),
+    `${r.vehicle.name}`,
+    `${type==='morning'?'🌅 Ida':'🌆 Vuelta'} · ${date} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
+    r.vehicle.phone||''
+  );
+}
+
+function openShareDay(type) {
+  const date = document.getElementById('route-date').value;
+  if (!date) { toast('Seleccioná una fecha primero'); return; }
+  const routes = S.routes[date]?.[type];
+  if (!routes||!routes.length) { toast('Primero generá las rutas de '+(type==='morning'?'Ida':'Vuelta')); return; }
+  const msg = buildDayMsg(date, type);
+  if (!msg) { toast('Sin rutas para compartir'); return; }
+  document.getElementById('share-icon').textContent = '📤';
+  _openShareModal(
+    msg,
+    `Rutas del día – ${type==='morning'?'Ida':'Vuelta'}`,
+    `${date} · ${routes.length} remis${routes.length!==1?'es':''}`
+  );
+}
+
+function openShareWeekDay(date, type) {
+  const routes = S.routes[date]?.[type];
+  if (!routes||!routes.length) { toast('Generá las rutas antes de compartir'); return; }
+  const msg = buildDayMsg(date, type);
+  document.getElementById('share-icon').textContent = '📤';
+  _openShareModal(
+    msg,
+    `Rutas – ${type==='morning'?'Ida':'Vuelta'}`,
+    `${date} · ${routes.length} remis${routes.length!==1?'es':''}`
+  );
+}
+
+function _cleanPhone(phone) {
+  return phone.replace(/[\s\-\+\(\)]/g,'').replace(/^0+/,'');
+}
+function doWhatsApp(usePhone) {
+  const msg     = document.getElementById('share-msg').value;
+  const encoded = encodeURIComponent(msg);
+  const phone   = usePhone ? _cleanPhone(document.getElementById('share-phone').value.trim()) : '';
+  const url     = phone
+    ? `https://wa.me/${phone}?text=${encoded}`
+    : `https://api.whatsapp.com/send?text=${encoded}`;
+  window.open(url, '_blank');
+}
+function doShareEmail() {
+  const msg     = document.getElementById('share-msg').value;
+  const subject = encodeURIComponent(document.getElementById('share-title').textContent);
+  const body    = encodeURIComponent(msg);
+  window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+}
+function doShareCopy() {
+  const msg = document.getElementById('share-msg').value;
+  navigator.clipboard.writeText(msg).then(()=>{
+    toast('📋 Mensaje copiado al portapapeles');
+    closeModal('share-modal');
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  ATTENDANCE
+// ═══════════════════════════════════════════════
+function renderAttendance() {
+  const date=document.getElementById('route-date').value;
+  const presentIds=new Set(S.attendance[date]||[]);
+  const active=S.employees.filter(e=>e.active!==false);
+  const el=document.getElementById('att-list');
+  if (!active.length) {
+    el.innerHTML=`<div class="empty"><div class="icon">👥</div><h3>Sin empleados</h3><p>Agregá empleados en la pestaña Empleados.</p><button class="btn btn-primary" onclick="showTab('empleados')">Ir a Empleados</button></div>`;
+    document.getElementById('att-count').textContent=''; return;
+  }
+  el.innerHTML=active.map(e=>{
+    const on=presentIds.has(e.id), hasC=e.lat&&e.lng;
+    return `<div class="att-item ${on?'on':''}" onclick="toggleAtt('${e.id}')">
+      <div class="att-check">${on?'✓':''}</div>
+      <div style="flex:1;overflow:hidden">
+        <div class="att-name">${escHtml(e.name)}</div>
+        <div class="att-addr">${escHtml(e.address||'Sin dirección')}</div>
+      </div>
+      ${!hasC?'<span class="no-coords">Sin coords</span>':''}
+    </div>`;
+  }).join('');
+  document.getElementById('att-count').textContent=`${presentIds.size} / ${active.length} presentes`;
+}
+function toggleAtt(id) {
+  const date=document.getElementById('route-date').value;
+  if (!date){toast('Seleccioná una fecha');return;}
+  if (!S.attendance[date]) S.attendance[date]=[];
+  const idx=S.attendance[date].indexOf(id);
+  if (idx===-1) S.attendance[date].push(id); else S.attendance[date].splice(idx,1);
+  save(); renderAttendance();
+}
+function toggleAll(val) {
+  const date=document.getElementById('route-date').value;
+  if (!date) return;
+  S.attendance[date]=val ? S.employees.filter(e=>e.active!==false).map(e=>e.id) : [];
+  save(); renderAttendance();
+}
+function onDateChange() { renderAttendance(); loadSavedRoutes(); clearMapLayers(); }
+
+// ═══════════════════════════════════════════════
+//  WEEKLY SCHEDULE
+// ═══════════════════════════════════════════════
+function getWeekDates(offset) {
+  const today=new Date();
+  const dow=today.getDay();
+  const mon=new Date(today);
+  mon.setDate(today.getDate()-(dow===0?6:dow-1)+offset*7);
+  return Array.from({length:7},(_,i)=>{
+    const d=new Date(mon); d.setDate(mon.getDate()+i);
+    return d.toISOString().split('T')[0];
+  });
+}
+function shiftWeek(dir) { weekOffset+=dir; renderWeekView(); }
+
+function getOrInitPlan(date, type) {
+  if (!S.weekPlan[date]) S.weekPlan[date]={};
+  if (!S.weekPlan[date][type]) {
+    S.weekPlan[date][type]=S.employees.filter(e=>e.active!==false).map(e=>e.id);
+  }
+  return S.weekPlan[date][type];
+}
+
+function toggleWeekEmp(date, type, empId) {
+  const plan=getOrInitPlan(date,type);
+  const idx=plan.indexOf(empId);
+  if (idx===-1) plan.push(empId); else plan.splice(idx,1);
+  save(); renderWeekDetail(date);
+}
+function selectAllWeek(date, type, val) {
+  if (!S.weekPlan[date]) S.weekPlan[date]={};
+  S.weekPlan[date][type]=val ? S.employees.filter(e=>e.active!==false).map(e=>e.id) : [];
+  save(); renderWeekDetail(date);
+}
+
+function renderWeekView() {
+  const dates=getWeekDates(weekOffset);
+  const today=new Date().toISOString().split('T')[0];
+  const fmt=d=>{ const [y,m,dd]=d.split('-'); return `${+dd}/${m}/${y}`; };
+  document.getElementById('week-label').textContent=`${fmt(dates[0])} – ${fmt(dates[6])}`;
+
+  document.getElementById('week-days').innerHTML=dates.map((d,i)=>{
+    const hasPlan=S.weekPlan[d]&&(S.weekPlan[d].morning||S.weekPlan[d].evening);
+    const isSel=d===selectedWeekDate;
+    const isToday=d===today;
+    const [,,dd]=d.split('-');
+    return `<button class="week-day-btn${isSel?' active':''}${hasPlan&&!isSel?' has-plan':''}${isToday&&!isSel?' is-today':''}"
+      onclick="selectWeekDay('${d}')">${DAY_NAMES[(i+1)%7]}<br><strong>${+dd}</strong></button>`;
+  }).join('');
+
+  if (!selectedWeekDate||!dates.includes(selectedWeekDate))
+    selectedWeekDate=dates.includes(today)?today:dates[0];
+
+  renderWeekDetail(selectedWeekDate);
+}
+
+function selectWeekDay(date) { selectedWeekDate=date; renderWeekView(); }
+
+function renderWeekDetail(date) {
+  const el=document.getElementById('week-detail');
+  const active=S.employees.filter(e=>e.active!==false);
+  if (!active.length) {
+    el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="icon">👥</div>
+      <h3>Sin empleados</h3><p>Agregá empleados primero.</p>
+      <button class="btn btn-primary" onclick="showTab('empleados')">Ir a Empleados</button></div>`;
+    return;
+  }
+
+  el.innerHTML=['morning','evening'].map(type=>{
+    const plan=getOrInitPlan(date,type);
+    const icon=type==='morning'?'🌅':'🌆';
+    const lbl=type==='morning'?'IDA – Búsqueda':'VUELTA – Retorno';
+    const hClass=type==='morning'?'morning-h':'evening-h';
+    const incCount=active.filter(e=>plan.includes(e.id)).length;
+    const hasRoutes=S.routes[date]?.[type];
+
+    const rows=active.map(e=>{
+      const inc=plan.includes(e.id);
+      const noC=!e.lat||!e.lng;
+      return `<div class="emp-row">
+        <span class="emp-row-name">${escHtml(e.name)}${noC?'<span class="emp-warn">⚠ sin coords</span>':''}</span>
+        <button class="tog-btn ${inc?'tog-on':'tog-off'}"
+          onclick="toggleWeekEmp('${date}','${type}','${e.id}')">
+          ${inc?'✓ Va':'✗ No va'}
+        </button>
+      </div>`;
+    }).join('');
+
+    return `<div class="trip-card">
+      <div class="trip-header ${hClass}">
+        <h3>${icon} ${lbl}</h3>
+        <span style="font-size:11px;color:var(--muted)">${incCount}/${active.length}</span>
+      </div>
+      <div class="trip-body">${rows}</div>
+      <div class="trip-footer">
+        <button class="btn btn-sm ${type==='morning'?'btn-success':'btn-amber'}"
+          onclick="generateFromWeek('${date}','${type}')">▶ Generar rutas</button>
+        <button class="btn btn-ghost btn-sm" onclick="selectAllWeek('${date}','${type}',true)">Todos</button>
+        <button class="btn btn-ghost btn-sm" onclick="selectAllWeek('${date}','${type}',false)">Ninguno</button>
+        ${hasRoutes?`<span class="trip-generated">✓ Generado</span>
+        <button class="btn btn-whatsapp btn-sm" onclick="openShareWeekDay('${date}','${type}')">📤 Compartir</button>`
+        :''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function generateFromWeek(date, type) {
+  const plan=getOrInitPlan(date,type);
+  S.attendance[date]=[...plan];
+  document.getElementById('route-date').value=date;
+  save();
+  showTab('hoy');
+  const routes=await generateRoutes(type);
+  if (routes) renderWeekDetail(date); // update "✓ Generado" badge
+}
+
+// ═══════════════════════════════════════════════
+//  EXCEL TEMPLATES & IMPORT
+// ═══════════════════════════════════════════════
+function downloadTemplate(type) {
+  if (typeof XLSX==='undefined') { toast('La librería Excel aún está cargando, intentá en un momento'); return; }
+  const wb=XLSX.utils.book_new();
+  let ws, filename;
+  if (type==='employees') {
+    ws=XLSX.utils.aoa_to_sheet([
+      ['Nombre','Dirección','Teléfono'],
+      ['Juan García','Av. Corrientes 1234, Buenos Aires','351-555-1234'],
+      ['María López','San Martín 456, Córdoba','351-555-5678'],
+      ['Pedro Gómez','Belgrano 789, Rosario','341-555-9012']
+    ]);
+    ws['!cols']=[{wch:28},{wch:42},{wch:18}];
+    XLSX.utils.book_append_sheet(wb,ws,'Empleados');
+    filename='plantilla_empleados.xlsx';
+  } else {
+    ws=XLSX.utils.aoa_to_sheet([
+      ['Nombre/Vehículo','Conductor','Capacidad','Teléfono'],
+      ['Remise 1 - Ford Transit','Carlos Rodríguez','8','351-555-9876'],
+      ['Remise 2 - VW Crafter','Luis Martínez','12','351-555-4321']
+    ]);
+    ws['!cols']=[{wch:32},{wch:26},{wch:12},{wch:18}];
+    XLSX.utils.book_append_sheet(wb,ws,'Vehículos');
+    filename='plantilla_vehiculos.xlsx';
+  }
+  XLSX.writeFile(wb,filename);
+  toast(`✅ Plantilla descargada`);
+}
+
+function importFile(input, type) {
+  const file=input.files[0];
+  if (!file) return;
+  const isXlsx=file.name.match(/\.(xlsx|xls)$/i);
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let rows=[];
+    if (isXlsx && typeof XLSX!=='undefined') {
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    } else {
+      rows=String(e.target.result).split(/\r?\n/).map(l=>l.split(','));
+    }
+    if (type==='employees') processEmpRows(rows);
+    else processVehRows(rows);
+    input.value='';
+  };
+  if (isXlsx) reader.readAsBinaryString(file); else reader.readAsText(file);
+}
+
+function processEmpRows(rows) {
+  let added=0;
+  for (const row of rows) {
+    const name=String(row[0]||'').trim();
+    const address=String(row[1]||'').trim();
+    const phone=String(row[2]||'').trim();
+    if (!name||name.toLowerCase()==='nombre') continue;
+    if (S.employees.find(x=>x.name.toLowerCase()===name.toLowerCase())) continue;
+    S.employees.push({id:uid(),name,address,phone,active:true,lat:null,lng:null});
+    added++;
+  }
+  save(); renderEmployees(); renderAttendance();
+  toast(`✅ ${added} empleados importados. Geocodificá sus direcciones.`);
+}
+
+function processVehRows(rows) {
+  let added=0;
+  for (const row of rows) {
+    const name=String(row[0]||'').trim();
+    const driver=String(row[1]||'').trim();
+    const capacity=parseInt(row[2])||8;
+    const phone=String(row[3]||'').trim();
+    if (!name||['nombre','nombre/vehículo'].includes(name.toLowerCase())) continue;
+    if (S.vehicles.find(x=>x.name.toLowerCase()===name.toLowerCase())) continue;
+    S.vehicles.push({id:uid(),name,driver,capacity,phone});
+    added++;
+  }
+  save(); renderVehicles();
+  toast(`✅ ${added} vehículos importados`);
+}
+
+// ═══════════════════════════════════════════════
+//  EMPLOYEE CRUD
+// ═══════════════════════════════════════════════
+function renderEmployees() {
+  const q=(document.getElementById('emp-search')?.value||'').toLowerCase();
+  const list=S.employees.filter(e=>e.name.toLowerCase().includes(q)||(e.address||'').toLowerCase().includes(q));
+  const tbody=document.getElementById('emp-tbody');
+  const empty=document.getElementById('emp-empty');
+  if (!list.length&&!S.employees.length) { tbody.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display='none';
+  tbody.innerHTML=list.map(e=>`
+    <tr>
+      <td><strong>${escHtml(e.name)}</strong>${e.phone?`<br><small style="color:var(--muted)">${escHtml(e.phone)}</small>`:''}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${escHtml(e.address||'—')}</td>
+      <td>${e.lat?`<span class="badge badge-green">✓ ${(+e.lat).toFixed(3)}, ${(+e.lng).toFixed(3)}</span>`:'<span class="badge badge-amber">Sin coords</span>'}</td>
+      <td>${e.active!==false?'<span class="badge badge-green">Activo</span>':'<span class="badge badge-red">Inactivo</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="openEmpModal('${e.id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e.id}')">Eliminar</button>
+      </td>
+    </tr>`).join('');
+}
+function openEmpModal(id) {
+  editEmpId=id||null;
+  document.getElementById('emp-modal-title').textContent=id?'Editar Empleado':'Agregar Empleado';
+  document.getElementById('emp-geo-result').textContent='';
+  document.getElementById('emp-map-coords').textContent='';
+  const btn=document.getElementById('emp-geo-btn');
+  delete btn.dataset.lat; delete btn.dataset.lng;
+  if (id) {
+    const e=S.employees.find(x=>x.id===id);
+    if (e) {
+      document.getElementById('emp-name').value=e.name||'';
+      document.getElementById('emp-addr').value=e.address||'';
+      document.getElementById('emp-phone').value=e.phone||'';
+      document.getElementById('emp-active').checked=e.active!==false;
+      if (e.lat) {
+        btn.dataset.lat=e.lat; btn.dataset.lng=e.lng;
+        document.getElementById('emp-geo-result').innerHTML=`<span style="color:var(--green)">✅ ${(+e.lat).toFixed(4)}, ${(+e.lng).toFixed(4)}</span>`;
+        openModal('emp-modal');
+        setTimeout(()=>showEmpMap(e.lat, e.lng), 80); // esperar que el modal esté visible
+        return;
+      }
+    }
+  } else {
+    document.getElementById('emp-name').value='';
+    document.getElementById('emp-addr').value='';
+    document.getElementById('emp-phone').value='';
+    document.getElementById('emp-active').checked=true;
+  }
+  hideEmpMap();
+  openModal('emp-modal');
+}
+function saveEmployee() {
+  const name=document.getElementById('emp-name').value.trim();
+  const addr=document.getElementById('emp-addr').value.trim();
+  const phone=document.getElementById('emp-phone').value.trim();
+  const active=document.getElementById('emp-active').checked;
+  const btn=document.getElementById('emp-geo-btn');
+  const lat=btn.dataset.lat?+btn.dataset.lat:null;
+  const lng=btn.dataset.lng?+btn.dataset.lng:null;
+  if (!name) { toast('Ingresá el nombre'); return; }
+  if (editEmpId) {
+    const e=S.employees.find(x=>x.id===editEmpId);
+    if (e) { e.name=name;e.address=addr;e.phone=phone;e.active=active;if(lat){e.lat=lat;e.lng=lng;} }
+  } else {
+    S.employees.push({id:uid(),name,address:addr,phone,active,lat,lng});
+  }
+  save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
+  toast(editEmpId?'✅ Empleado actualizado':'✅ Empleado agregado');
+}
+function deleteEmployee(id) {
+  if (!confirm('¿Eliminar este empleado?')) return;
+  S.employees=S.employees.filter(e=>e.id!==id);
+  save(); renderEmployees(); renderAttendance();
+  toast('Empleado eliminado');
+}
+
+// ═══════════════════════════════════════════════
+//  VEHICLE CRUD
+// ═══════════════════════════════════════════════
+function renderVehicles() {
+  const grid=document.getElementById('v-grid');
+  const empty=document.getElementById('v-empty');
+  if (!S.vehicles.length) { grid.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display='none';
+  grid.innerHTML=S.vehicles.map((v,i)=>`
+    <div class="v-card" style="border-left-color:${COLORS[i%COLORS.length]}">
+      <h3>${escHtml(v.name)}</h3>
+      <p>👤 ${escHtml(v.driver||'Sin conductor')}</p>
+      <p>🪑 Capacidad: ${v.capacity} pasajeros</p>
+      ${v.phone?`<p>📞 ${escHtml(v.phone)}</p>`:''}
+      <div class="v-card-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openVehModal('${v.id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${v.id}')">Eliminar</button>
+      </div>
+    </div>`).join('');
+}
+function openVehModal(id) {
+  editVehId=id||null;
+  document.getElementById('veh-modal-title').textContent=id?'Editar Vehículo':'Agregar Vehículo';
+  if (id) {
+    const v=S.vehicles.find(x=>x.id===id);
+    if (v) {
+      document.getElementById('veh-name').value=v.name||'';
+      document.getElementById('veh-driver').value=v.driver||'';
+      document.getElementById('veh-cap').value=v.capacity||8;
+      document.getElementById('veh-phone').value=v.phone||'';
+    }
+  } else {
+    document.getElementById('veh-name').value='';
+    document.getElementById('veh-driver').value='';
+    document.getElementById('veh-cap').value=8;
+    document.getElementById('veh-phone').value='';
+  }
+  openModal('veh-modal');
+}
+function saveVehicle() {
+  const name=document.getElementById('veh-name').value.trim();
+  const driver=document.getElementById('veh-driver').value.trim();
+  const capacity=+document.getElementById('veh-cap').value||8;
+  const phone=document.getElementById('veh-phone').value.trim();
+  if (!name) { toast('Ingresá el nombre del vehículo'); return; }
+  if (editVehId) {
+    const v=S.vehicles.find(x=>x.id===editVehId);
+    if (v) { v.name=name;v.driver=driver;v.capacity=capacity;v.phone=phone; }
+  } else {
+    S.vehicles.push({id:uid(),name,driver,capacity,phone});
+  }
+  save(); closeModal('veh-modal'); renderVehicles();
+  toast(editVehId?'✅ Vehículo actualizado':'✅ Vehículo agregado');
+}
+function deleteVehicle(id) {
+  if (!confirm('¿Eliminar este vehículo?')) return;
+  S.vehicles=S.vehicles.filter(v=>v.id!==id);
+  save(); renderVehicles(); toast('Vehículo eliminado');
+}
+
+// ═══════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════
+function loadConfig() {
+  document.getElementById('cfg-name').value=S.factory.name||'';
+  document.getElementById('cfg-addr').value=S.factory.address||'';
+  document.getElementById('cfg-city').value=S.city||'';
+  document.getElementById('cfg-speed').value=S.speed||40;
+  if (S.factory.lat) document.getElementById('cfg-coords').textContent=`📍 ${(+S.factory.lat).toFixed(5)}, ${(+S.factory.lng).toFixed(5)}`;
+  setTimeout(()=>{ initCfgMap(); cfgMap&&cfgMap.invalidateSize(); },100);
+}
+function saveConfig() {
+  S.factory.name=document.getElementById('cfg-name').value.trim();
+  S.factory.address=document.getElementById('cfg-addr').value.trim();
+  S.city=document.getElementById('cfg-city').value.trim();
+  S.speed=+document.getElementById('cfg-speed').value||40;
+  save();
+}
+
+// ═══════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+
+let toastTimer;
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+}
+function uid()    { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+function init() {
+  load();
+  document.getElementById('route-date').value=new Date().toISOString().split('T')[0];
+  initMap();
+  renderAttendance();
+  renderEmployees();
+  renderVehicles();
+  loadSavedRoutes();
+
+  // Geocodificar faltantes button
+  const toolbar=document.querySelector('#tab-empleados .toolbar');
+  const gBtn=document.createElement('button');
+  gBtn.className='btn btn-ghost';
+  gBtn.textContent='🌐 Geocodificar faltantes';
+  gBtn.onclick=geocodeAllMissing;
+  toolbar.appendChild(gBtn);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

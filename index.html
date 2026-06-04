@@ -165,6 +165,30 @@ nav button.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:
 .btn-whatsapp:hover{background:var(--wa-d)}
 a.btn{text-decoration:none}
 
+/* ─── Shift bar ─── */
+.shift-bar{display:flex;align-items:center;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+.shift-bar-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-l);margin-right:2px;white-space:nowrap}
+.shift-btn{
+  padding:6px 13px;border-radius:var(--r-full);
+  border:1.5px solid var(--border);background:#fff;
+  cursor:pointer;font-size:12px;font-weight:600;
+  color:var(--muted);transition:.15s;white-space:nowrap;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.shift-btn small{font-size:10px;opacity:.75;font-weight:500}
+.shift-btn.active{color:#fff!important;border-color:transparent}
+.shift-btn:not(.active):hover{background:var(--border-l)}
+
+/* ─── Shifts config list ─── */
+.shift-item{
+  display:flex;align-items:center;gap:10px;padding:10px 13px;
+  border-radius:var(--r-sm);border:1.5px solid var(--border);
+  background:#fff;margin-bottom:8px;
+}
+.shift-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.shift-item-name{font-size:13px;font-weight:600;flex:1}
+.shift-item-time{font-size:11.5px;color:var(--muted);white-space:nowrap}
+
 /* ─── Attendance ─── */
 .att-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:nowrap}
 .att-count{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}
@@ -518,6 +542,7 @@ tbody tr:hover td{background:var(--blue-l)}
 
 <!-- ══════════════ TAB HOY ══════════════ -->
 <div id="tab-hoy" class="tab active">
+  <div id="shift-bar-hoy" class="shift-bar"></div>
   <div class="controls">
     <input type="date" id="route-date" class="date-input" onchange="onDateChange()">
     <button class="btn btn-success" onclick="generateRoutes('morning')">🌅 Generar Ida</button>
@@ -568,6 +593,7 @@ tbody tr:hover td{background:var(--blue-l)}
     <span class="week-label" id="week-label"></span>
     <button class="btn btn-ghost btn-sm" onclick="shiftWeek(1)">Siguiente →</button>
   </div>
+  <div id="shift-bar-week" class="shift-bar"></div>
   <div class="week-days" id="week-days"></div>
   <div class="week-detail" id="week-detail"></div>
 </div>
@@ -658,6 +684,11 @@ tbody tr:hover td{background:var(--blue-l)}
       <label>Velocidad promedio (km/h) <small style="color:var(--muted)">(solo como referencia; OSRM calcula tiempos reales)</small></label>
       <input class="form-control" id="cfg-speed" type="number" value="40" min="10" max="120" style="width:100px" oninput="saveConfig()">
     </div>
+    <br>
+    <h2>🕐 Turnos</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Cada turno tiene su propia asistencia y rutas de ida/vuelta independientes.</p>
+    <div id="cfg-shifts-list"></div>
+    <button class="btn btn-ghost" onclick="openAddShiftModal()">+ Agregar turno</button>
   </div>
 </div>
 
@@ -769,6 +800,36 @@ tbody tr:hover td{background:var(--blue-l)}
   </div>
 </div>
 
+<!-- ══════════════ MODAL TURNO ══════════════ -->
+<div class="overlay" id="shift-modal">
+  <div class="modal" style="max-width:400px">
+    <h2 id="shift-modal-title">Agregar Turno</h2>
+    <div class="form-group">
+      <label>Nombre del turno</label>
+      <input class="form-control" id="shift-name" placeholder="Ej: Mañana, Tarde, Noche">
+    </div>
+    <div class="form-group">
+      <label>Horario</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="form-control" id="shift-start" type="time" value="06:00">
+        <span style="color:var(--muted);font-weight:600">–</span>
+        <input class="form-control" id="shift-end" type="time" value="14:00">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Color</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="color" id="shift-color" value="#059669" style="height:36px;width:60px;border:1.5px solid var(--border);border-radius:var(--r-sm);cursor:pointer;padding:2px;background:#fff">
+        <span style="font-size:12px;color:var(--muted)">Usá un color distinto para cada turno</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('shift-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveShiftModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div id="gen-overlay">
   <div class="gen-spin"></div>
   <span id="gen-overlay-msg">Calculando rutas…</span>
@@ -785,21 +846,30 @@ const DAY_NAMES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
+const DEFAULT_SHIFTS = [
+  {id:'manana', name:'Mañana', start:'06:00', end:'14:00', color:'#059669'},
+  {id:'tarde',  name:'Tarde',  start:'14:00', end:'22:00', color:'#d97706'},
+  {id:'noche',  name:'Noche',  start:'22:00', end:'06:00', color:'#7c3aed'}
+];
+
 let S = {
   factory:  { name:'Fábrica', address:'', lat:null, lng:null },
   employees: [],
   vehicles:  [],
-  attendance:{},   // 'YYYY-MM-DD' -> [id,...]
-  routes:    {},   // 'YYYY-MM-DD' -> {morning:[...], evening:[...]}
-  weekPlan:  {},   // 'YYYY-MM-DD' -> {morning:[ids], evening:[ids]}
+  shifts:    JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
+  attendance:{},   // 'YYYY-MM-DD__shiftId' -> [id,...]
+  routes:    {},   // 'YYYY-MM-DD__shiftId' -> {morning:[...], evening:[...]}
+  weekPlan:  {},   // 'YYYY-MM-DD__shiftId' -> {morning:[ids], evening:[ids]}
   speed: 40,
-  city: ''          // ciudad/localidad de referencia para geocodificación
+  city: ''
 };
 
-let editEmpId = null, editVehId = null;
+let editEmpId = null, editVehId = null, editShiftId = null;
 let map = null, cfgMap = null, mapLayers = [], cfgMarker = null;
 let empModalMap = null, empMarker = null;
 let weekOffset = 0, selectedWeekDate = null;
+let currentShiftId = null;  // shift activo en pestaña Hoy
+let weekShiftId    = null;  // shift activo en pestaña Semana
 
 // ═══════════════════════════════════════════════
 //  PERSISTENCE
@@ -816,8 +886,28 @@ function load() {
       const old = localStorage.getItem('rg_v2');
       if (old) { S = Object.assign({}, S, JSON.parse(old)); save(); }
     }
+    // ensure shifts array exists
+    if (!S.shifts || !S.shifts.length) {
+      S.shifts = JSON.parse(JSON.stringify(DEFAULT_SHIFTS));
+    }
+    // Migrate old flat keys (pre-turnos) to shift-keyed format
+    const firstId = S.shifts[0].id;
+    ['attendance','routes','weekPlan'].forEach(k => {
+      const obj = S[k];
+      Object.keys(obj).forEach(key => {
+        if (!key.includes('__')) {
+          const nk = key + '__' + firstId;
+          if (obj[nk] === undefined) obj[nk] = obj[key];
+          delete obj[key];
+        }
+      });
+    });
   } catch(e){}
 }
+
+// ─── Claves compuestas fecha+turno ───────────────
+function _sk(date)  { return `${date}__${currentShiftId||S.shifts[0]?.id||'def'}`; }
+function _wsk(date) { return `${date}__${weekShiftId   ||S.shifts[0]?.id||'def'}`; }
 
 // ═══════════════════════════════════════════════
 //  TABS
@@ -1129,7 +1219,7 @@ async function generateRoutes(type, employeeOverride) {
   if (!S.factory.lat) { toast('Configurá la ubicación de la fábrica primero'); return null; }
   if (!S.vehicles.length) { toast('Agregá al menos un vehículo'); showTab('vehiculos'); return null; }
 
-  const presentIds = employeeOverride || S.attendance[date] || [];
+  const presentIds = employeeOverride || S.attendance[_sk(date)] || [];
   if (!presentIds.length) { toast('Marcá qué empleados vienen hoy en Asistencia'); return null; }
 
   const emps = S.employees.filter(e => presentIds.includes(e.id) && e.lat && e.lng);
@@ -1197,8 +1287,9 @@ async function generateRoutes(type, employeeOverride) {
   }
 
   setGenerating(false);
-  if (!S.routes[date]) S.routes[date]={};
-  S.routes[date][type]=routes;
+  const sk=_sk(date);
+  if (!S.routes[sk]) S.routes[sk]={};
+  S.routes[sk][type]=routes;
   save();
   renderRouteCards(routes, type);
   renderMapRoutes(routes, type);
@@ -1316,7 +1407,7 @@ function toggleMoveMenu(key) {
 
 function reorderStop(routeIdx, stopIdx, dir, type) {
   const date = document.getElementById('route-date').value;
-  const routes = S.routes[date]?.[type];
+  const routes = S.routes[_sk(date)]?.[type];
   if (!routes) return;
   const stops = routes[routeIdx].stops;
   const newIdx = stopIdx + dir;
@@ -1331,7 +1422,7 @@ function reorderStop(routeIdx, stopIdx, dir, type) {
 
 function moveEmpToRoute(fromIdx, stopIdx, toIdx, type) {
   const date = document.getElementById('route-date').value;
-  const routes = S.routes[date]?.[type];
+  const routes = S.routes[_sk(date)]?.[type];
   if (!routes) return;
 
   // Extraer parada del origen
@@ -1350,7 +1441,7 @@ function moveEmpToRoute(fromIdx, stopIdx, toIdx, type) {
 
   // Eliminar rutas sin empleados
   const active = routes.filter(r => r.stops.some(s => !s.isFactory));
-  S.routes[date][type] = active;
+  S.routes[_sk(date)][type] = active;
   save();
   renderRouteCards(active, type);
   renderMapRoutes(active, type);
@@ -1378,8 +1469,9 @@ async function refreshRouteGeometry(routeIdx, routes, type, date) {
 
 function loadSavedRoutes() {
   const date = document.getElementById('route-date').value;
-  if (!date||!S.routes[date]) return;
-  const dr=S.routes[date];
+  const sk=_sk(date);
+  if (!date||!S.routes[sk]) return;
+  const dr=S.routes[sk];
   if (dr.morning) { renderRouteCards(dr.morning,'morning'); renderMapRoutes(dr.morning,'morning'); }
   if (dr.evening) renderRouteCards(dr.evening,'evening');
 }
@@ -1389,7 +1481,7 @@ function loadSavedRoutes() {
 // ═══════════════════════════════════════════════
 function printRoute(idx, type) {
   const date=document.getElementById('route-date').value;
-  const routes=S.routes[date]?.[type];
+  const routes=S.routes[_sk(date)]?.[type];
   if (!routes||!routes[idx]) return;
   const r=routes[idx], label=type==='morning'?'IDA (Búsqueda)':'VUELTA (Retorno)';
   const stopsHtml=r.stops.map((s,si)=>
@@ -1410,7 +1502,7 @@ function printRoute(idx, type) {
 }
 function copyRouteText(idx, type) {
   const date=document.getElementById('route-date').value;
-  const routes=S.routes[date]?.[type];
+  const routes=S.routes[_sk(date)]?.[type];
   if (!routes||!routes[idx]) return;
   const r=routes[idx], label=type==='morning'?'IDA':'VUELTA';
   const lines=[`🚗 RUTA ${label} — ${date}`,`Vehículo: ${r.vehicle.name}`,
@@ -1431,11 +1523,12 @@ function _gmLink(route) {
   return `https://www.google.com/maps/dir/?api=1&origin=${first.lat},${first.lng}&destination=${last.lat},${last.lng}${mid?'&waypoints='+encodeURIComponent(mid):''}&travelmode=driving`;
 }
 
-function buildRouteMsg(route, date, type) {
+function buildRouteMsg(route, date, type, shiftName='') {
   const label  = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
   const lines  = [
     `🚗 *${label.toUpperCase()}*`,
     `📅 Fecha: ${date}`,
+    shiftName ? `🕐 Turno: *${shiftName}*` : null,
     `🚌 Vehículo: *${route.vehicle.name}*`,
     route.vehicle.driver ? `👤 Conductor: ${route.vehicle.driver}` : null,
     route.vehicle.phone  ? `📞 Tel: ${route.vehicle.phone}` : null,
@@ -1454,14 +1547,17 @@ function buildRouteMsg(route, date, type) {
   return lines.filter(l=>l!==null).join('\n');
 }
 
-function buildDayMsg(date, type) {
-  const routes = S.routes[date]?.[type];
+function buildDayMsg(date, type, routeKey) {
+  const key    = routeKey || _sk(date);
+  const routes = S.routes[key]?.[type];
   if (!routes||!routes.length) return null;
-  const label   = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
-  const factory = S.factory.name || 'Fábrica';
+  const label     = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
+  const factory   = S.factory.name || 'Fábrica';
+  const shiftName = S.shifts.find(s=>s.id===key.split('__')[1])?.name || '';
   const lines   = [
     `📤 *RUTAS ${label.toUpperCase()}*`,
     `📅 ${date}  ·  🏭 ${factory}`,
+    shiftName ? `🕐 Turno: *${shiftName}*` : null,
     '━━━━━━━━━━━━━━━━━━',
   ];
   routes.forEach((r, ri) => {
@@ -1489,16 +1585,18 @@ function _openShareModal(msg, title, subtitle, phone='') {
 
 function openShareRoute(routeIdx, type) {
   const date   = document.getElementById('route-date').value;
-  const routes = S.routes[date]?.[type];
+  const sk     = _sk(date);
+  const routes = S.routes[sk]?.[type];
   if (!routes||!routes[routeIdx]) { toast('No hay ruta guardada'); return; }
-  const r      = routes[routeIdx];
-  const color  = COLORS[routeIdx % COLORS.length];
+  const r          = routes[routeIdx];
+  const color      = COLORS[routeIdx % COLORS.length];
+  const shiftName  = S.shifts.find(s=>s.id===currentShiftId)?.name || '';
   document.getElementById('share-icon').innerHTML =
     `<div style="width:34px;height:34px;background:${color};border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px">🚗</div>`;
   _openShareModal(
-    buildRouteMsg(r, date, type),
+    buildRouteMsg(r, date, type, shiftName),
     `${r.vehicle.name}`,
-    `${type==='morning'?'🌅 Ida':'🌆 Vuelta'} · ${date} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
+    `${type==='morning'?'🌅 Ida':'🌆 Vuelta'}${shiftName?' · '+shiftName:''} · ${date} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
     r.vehicle.phone||''
   );
 }
@@ -1506,9 +1604,10 @@ function openShareRoute(routeIdx, type) {
 function openShareDay(type) {
   const date = document.getElementById('route-date').value;
   if (!date) { toast('Seleccioná una fecha primero'); return; }
-  const routes = S.routes[date]?.[type];
+  const sk     = _sk(date);
+  const routes = S.routes[sk]?.[type];
   if (!routes||!routes.length) { toast('Primero generá las rutas de '+(type==='morning'?'Ida':'Vuelta')); return; }
-  const msg = buildDayMsg(date, type);
+  const msg = buildDayMsg(date, type, sk);
   if (!msg) { toast('Sin rutas para compartir'); return; }
   document.getElementById('share-icon').textContent = '📤';
   _openShareModal(
@@ -1519,9 +1618,10 @@ function openShareDay(type) {
 }
 
 function openShareWeekDay(date, type) {
-  const routes = S.routes[date]?.[type];
+  const wsk    = _wsk(date);
+  const routes = S.routes[wsk]?.[type];
   if (!routes||!routes.length) { toast('Generá las rutas antes de compartir'); return; }
-  const msg = buildDayMsg(date, type);
+  const msg = buildDayMsg(date, type, wsk);
   document.getElementById('share-icon').textContent = '📤';
   _openShareModal(
     msg,
@@ -1561,7 +1661,8 @@ function doShareCopy() {
 // ═══════════════════════════════════════════════
 function renderAttendance() {
   const date=document.getElementById('route-date').value;
-  const presentIds=new Set(S.attendance[date]||[]);
+  const sk=_sk(date);
+  const presentIds=new Set(S.attendance[sk]||[]);
   const active=S.employees.filter(e=>e.active!==false);
   const el=document.getElementById('att-list');
   if (!active.length) {
@@ -1585,15 +1686,16 @@ function renderAttendance() {
 function toggleAtt(id) {
   const date=document.getElementById('route-date').value;
   if (!date){toast('Seleccioná una fecha');return;}
-  if (!S.attendance[date]) S.attendance[date]=[];
-  const idx=S.attendance[date].indexOf(id);
-  if (idx===-1) S.attendance[date].push(id); else S.attendance[date].splice(idx,1);
+  const sk=_sk(date);
+  if (!S.attendance[sk]) S.attendance[sk]=[];
+  const idx=S.attendance[sk].indexOf(id);
+  if (idx===-1) S.attendance[sk].push(id); else S.attendance[sk].splice(idx,1);
   save(); renderAttendance();
 }
 function toggleAll(val) {
   const date=document.getElementById('route-date').value;
   if (!date) return;
-  S.attendance[date]=val ? S.employees.filter(e=>e.active!==false).map(e=>e.id) : [];
+  S.attendance[_sk(date)]=val ? S.employees.filter(e=>e.active!==false).map(e=>e.id) : [];
   save(); renderAttendance();
 }
 function onDateChange() { renderAttendance(); loadSavedRoutes(); clearMapLayers(); }
@@ -1614,11 +1716,12 @@ function getWeekDates(offset) {
 function shiftWeek(dir) { weekOffset+=dir; renderWeekView(); }
 
 function getOrInitPlan(date, type) {
-  if (!S.weekPlan[date]) S.weekPlan[date]={};
-  if (!S.weekPlan[date][type]) {
-    S.weekPlan[date][type]=S.employees.filter(e=>e.active!==false).map(e=>e.id);
+  const wsk=_wsk(date);
+  if (!S.weekPlan[wsk]) S.weekPlan[wsk]={};
+  if (!S.weekPlan[wsk][type]) {
+    S.weekPlan[wsk][type]=S.employees.filter(e=>e.active!==false).map(e=>e.id);
   }
-  return S.weekPlan[date][type];
+  return S.weekPlan[wsk][type];
 }
 
 function toggleWeekEmp(date, type, empId) {
@@ -1628,8 +1731,9 @@ function toggleWeekEmp(date, type, empId) {
   save(); renderWeekDetail(date);
 }
 function selectAllWeek(date, type, val) {
-  if (!S.weekPlan[date]) S.weekPlan[date]={};
-  S.weekPlan[date][type]=val ? S.employees.filter(e=>e.active!==false).map(e=>e.id) : [];
+  const wsk=_wsk(date);
+  if (!S.weekPlan[wsk]) S.weekPlan[wsk]={};
+  S.weekPlan[wsk][type]=val ? S.employees.filter(e=>e.active!==false).map(e=>e.id) : [];
   save(); renderWeekDetail(date);
 }
 
@@ -1640,7 +1744,7 @@ function renderWeekView() {
   document.getElementById('week-label').textContent=`${fmt(dates[0])} – ${fmt(dates[6])}`;
 
   document.getElementById('week-days').innerHTML=dates.map((d,i)=>{
-    const hasPlan=S.weekPlan[d]&&(S.weekPlan[d].morning||S.weekPlan[d].evening);
+    const hasPlan=S.shifts.some(sh=>{ const wk=`${d}__${sh.id}`; return S.weekPlan[wk]&&(S.weekPlan[wk].morning||S.weekPlan[wk].evening); });
     const isSel=d===selectedWeekDate;
     const isToday=d===today;
     const [,,dd]=d.split('-');
@@ -1672,7 +1776,7 @@ function renderWeekDetail(date) {
     const lbl=type==='morning'?'IDA – Búsqueda':'VUELTA – Retorno';
     const hClass=type==='morning'?'morning-h':'evening-h';
     const incCount=active.filter(e=>plan.includes(e.id)).length;
-    const hasRoutes=S.routes[date]?.[type];
+    const hasRoutes=S.routes[_wsk(date)]?.[type];
 
     const rows=active.map(e=>{
       const inc=plan.includes(e.id);
@@ -1706,13 +1810,16 @@ function renderWeekDetail(date) {
 }
 
 async function generateFromWeek(date, type) {
-  const plan=getOrInitPlan(date,type);
-  S.attendance[date]=[...plan];
+  const plan=getOrInitPlan(date,type); // reads S.weekPlan[_wsk(date)]
+  // Sync Hoy shift to match Semana shift so routes go to the right key
+  currentShiftId = weekShiftId || S.shifts[0]?.id;
+  S.attendance[_sk(date)]=[...plan];
   document.getElementById('route-date').value=date;
   save();
   showTab('hoy');
+  renderShiftBar();
   const routes=await generateRoutes(type);
-  if (routes) renderWeekDetail(date); // update "✓ Generado" badge
+  if (routes) renderWeekDetail(date);
 }
 
 // ═══════════════════════════════════════════════
@@ -1946,6 +2053,7 @@ function loadConfig() {
   document.getElementById('cfg-speed').value=S.speed||40;
   if (S.factory.lat) document.getElementById('cfg-coords').textContent=`📍 ${(+S.factory.lat).toFixed(5)}, ${(+S.factory.lng).toFixed(5)}`;
   setTimeout(()=>{ initCfgMap(); cfgMap&&cfgMap.invalidateSize(); },100);
+  renderShiftsConfig();
 }
 function saveConfig() {
   S.factory.name=document.getElementById('cfg-name').value.trim();
@@ -1973,12 +2081,124 @@ function uid()    { return Date.now().toString(36)+Math.random().toString(36).sl
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ═══════════════════════════════════════════════
+//  TURNOS – Shift management
+// ═══════════════════════════════════════════════
+function renderShiftBar() {
+  const el=document.getElementById('shift-bar-hoy'); if (!el) return;
+  if (S.shifts.length<=1) { el.style.display='none'; return; }
+  el.style.display='flex';
+  el.innerHTML=`<span class="shift-bar-label">Turno</span>`+
+    S.shifts.map(sh=>{
+      const act=sh.id===currentShiftId;
+      return `<button class="shift-btn ${act?'active':''}"
+        style="${act?`background:${sh.color};border-color:${sh.color}`:`color:${sh.color};border-color:${sh.color}44`}"
+        onclick="selectShift('${sh.id}')">
+        <span>${escHtml(sh.name)}</span><small>${sh.start}–${sh.end}</small>
+      </button>`;
+    }).join('');
+}
+
+function selectShift(id) {
+  currentShiftId=id; renderShiftBar(); renderAttendance(); clearMapLayers();
+  document.getElementById('routes-morning').innerHTML='';
+  document.getElementById('routes-evening').innerHTML='';
+  loadSavedRoutes(); hoyTab('asistencia');
+}
+
+function renderWeekShiftBar() {
+  const el=document.getElementById('shift-bar-week'); if (!el) return;
+  if (S.shifts.length<=1) { el.style.display='none'; return; }
+  el.style.display='flex';
+  el.innerHTML=`<span class="shift-bar-label">Turno</span>`+
+    S.shifts.map(sh=>{
+      const act=sh.id===weekShiftId;
+      return `<button class="shift-btn ${act?'active':''}"
+        style="${act?`background:${sh.color};border-color:${sh.color}`:`color:${sh.color};border-color:${sh.color}44`}"
+        onclick="selectWeekShift('${sh.id}')">
+        <span>${escHtml(sh.name)}</span><small>${sh.start}–${sh.end}</small>
+      </button>`;
+    }).join('');
+}
+
+function selectWeekShift(id) {
+  weekShiftId=id; renderWeekShiftBar(); renderWeekView();
+}
+
+function renderShiftsConfig() {
+  const el=document.getElementById('cfg-shifts-list'); if (!el) return;
+  el.innerHTML=S.shifts.map(sh=>`
+    <div class="shift-item">
+      <div class="shift-dot" style="background:${sh.color}"></div>
+      <div class="shift-item-name">${escHtml(sh.name)}</div>
+      <div class="shift-item-time">${sh.start} – ${sh.end}</div>
+      <button class="btn btn-ghost btn-sm" onclick="openEditShiftModal('${sh.id}')">Editar</button>
+      ${S.shifts.length>1?`<button class="btn btn-danger btn-sm" onclick="deleteShift('${sh.id}')">✕</button>`:''}
+    </div>`).join('');
+}
+
+function deleteShift(id) {
+  if (S.shifts.length<=1){toast('Debe quedar al menos un turno');return;}
+  const sh=S.shifts.find(s=>s.id===id);
+  if (!confirm(`¿Eliminar el turno "${sh?.name}"?\nSe perderán su asistencia y rutas.`)) return;
+  ['attendance','routes','weekPlan'].forEach(k=>{
+    Object.keys(S[k]).forEach(key=>{ if(key.endsWith('__'+id)) delete S[k][key]; });
+  });
+  S.shifts=S.shifts.filter(s=>s.id!==id);
+  if (currentShiftId===id) { currentShiftId=S.shifts[0]?.id||null; renderShiftBar(); }
+  if (weekShiftId===id)    { weekShiftId   =S.shifts[0]?.id||null; renderWeekShiftBar(); }
+  save(); renderShiftsConfig(); toast('Turno eliminado');
+}
+
+function openAddShiftModal() {
+  editShiftId=null;
+  document.getElementById('shift-modal-title').textContent='Agregar Turno';
+  document.getElementById('shift-name').value='';
+  document.getElementById('shift-start').value='06:00';
+  document.getElementById('shift-end').value='14:00';
+  document.getElementById('shift-color').value='#2563eb';
+  openModal('shift-modal');
+}
+
+function openEditShiftModal(id) {
+  const sh=S.shifts.find(s=>s.id===id); if (!sh) return;
+  editShiftId=id;
+  document.getElementById('shift-modal-title').textContent='Editar Turno';
+  document.getElementById('shift-name').value=sh.name;
+  document.getElementById('shift-start').value=sh.start;
+  document.getElementById('shift-end').value=sh.end;
+  document.getElementById('shift-color').value=sh.color||'#2563eb';
+  openModal('shift-modal');
+}
+
+function saveShiftModal() {
+  const name=document.getElementById('shift-name').value.trim();
+  if (!name){toast('Ingresá un nombre');return;}
+  const start=document.getElementById('shift-start').value;
+  const end  =document.getElementById('shift-end').value;
+  const color=document.getElementById('shift-color').value;
+  if (editShiftId) {
+    const sh=S.shifts.find(s=>s.id===editShiftId);
+    if (sh){sh.name=name;sh.start=start;sh.end=end;sh.color=color;}
+  } else {
+    const nid=uid();
+    S.shifts.push({id:nid,name,start,end,color});
+  }
+  save(); renderShiftsConfig(); renderShiftBar(); renderWeekShiftBar();
+  closeModal('shift-modal');
+  toast(editShiftId?'Turno actualizado':'Turno agregado');
+}
+
+// ═══════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════
 function init() {
   load();
+  currentShiftId = S.shifts[0]?.id || null;
+  weekShiftId    = S.shifts[0]?.id || null;
   document.getElementById('route-date').value=new Date().toISOString().split('T')[0];
   initMap();
+  renderShiftBar();
+  renderWeekShiftBar();
   renderAttendance();
   renderEmployees();
   renderVehicles();

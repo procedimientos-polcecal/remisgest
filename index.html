@@ -7,6 +7,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 /* ─── Reset ─── */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -518,9 +521,61 @@ tbody tr:hover td{background:var(--blue-l)}
   nav button{padding:12px 14px;font-size:12px}
   .controls{padding:8px 10px;gap:6px}
 }
+
+/* ─── Login screen ─── */
+#login-screen{
+  display:none;position:fixed;inset:0;
+  background:linear-gradient(135deg,#0f1f5c 0%,#1e3a8a 40%,#1d4ed8 100%);
+  z-index:10000;align-items:center;justify-content:center;padding:20px;
+}
+#login-screen.open{display:flex}
+.login-card{
+  background:#fff;border-radius:var(--r-xl);
+  padding:36px 32px 28px;width:380px;max-width:95vw;
+  box-shadow:var(--s-modal);text-align:center;
+  animation:modalIn .3s ease;
+}
+.login-logo{
+  width:68px;height:68px;border-radius:18px;
+  background:linear-gradient(135deg,#1e3a8a,#2563eb);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 18px;
+  box-shadow:0 6px 20px rgba(37,99,235,.4);
+}
+.login-card h1{font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.5px}
+.login-card .login-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.login-card .form-group{text-align:left;margin-bottom:14px}
+.login-error{color:var(--red);font-size:12px;margin-top:10px;min-height:18px;font-weight:500}
+.fb-note{font-size:11px;color:var(--muted-l);margin-top:16px;line-height:1.6;padding:10px;background:var(--border-l);border-radius:var(--r-sm)}
 </style>
 </head>
 <body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="./logo-pp.png" alt="Logo" style="height:38px;object-fit:contain" onerror="this.parentElement.innerHTML='🚗'">
+    </div>
+    <h1>RemisGest</h1>
+    <p class="login-sub">Ingresá con tu cuenta para acceder</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input class="form-control" id="login-email" type="email" placeholder="tu@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input class="form-control" id="login-pw" type="password" placeholder="••••••••"
+        autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()"
+      style="width:100%;padding:12px;font-size:14px;font-weight:600;justify-content:center">
+      Ingresar
+    </button>
+    <div class="login-error" id="login-error"></div>
+    <div class="fb-note" id="fb-setup-note" style="display:none"></div>
+  </div>
+</div>
 
 <header>
   <div class="logo-wrap">
@@ -530,6 +585,10 @@ tbody tr:hover td{background:var(--blue-l)}
     <h1>Gestión de Remises</h1>
   </div>
   <span class="sub">Polysan S.A. · Polcecal S.A.</span>
+  <div id="fb-logout-btn" style="display:none;align-items:center;gap:8px;margin-left:8px">
+    <span id="fb-user-info" style="font-size:11px;color:rgba(255,255,255,.7);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button onclick="doLogout()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:11px;white-space:nowrap;font-weight:600">Salir</button>
+  </div>
 </header>
 
 <nav id="main-nav">
@@ -720,6 +779,15 @@ tbody tr:hover td{background:var(--blue-l)}
       <label>Teléfono (opcional)</label>
       <input class="form-control" id="emp-phone" placeholder="Ej: 351-555-1234">
     </div>
+    <div class="form-group">
+      <label>Turno habitual</label>
+      <select class="form-control" id="emp-default-shift">
+        <option value="">— Sin turno fijo —</option>
+      </select>
+      <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">
+        Pre-marca asistencia automáticamente en ese turno cada día.
+      </small>
+    </div>
     <div class="form-group" style="display:flex;align-items:center;gap:8px">
       <input type="checkbox" id="emp-active" checked style="width:16px;height:16px">
       <label for="emp-active" style="margin:0;cursor:pointer">Empleado activo</label>
@@ -843,6 +911,27 @@ tbody tr:hover td{background:var(--blue-l)}
 const COLORS = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 const DAY_NAMES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
+// ═══════════════════════════════════════════════════════════════════════
+//  🔑 FIREBASE CONFIG — Para login y sincronización multi-dispositivo
+//  Pasos:
+//   1. Ir a https://console.firebase.google.com → Crear proyecto
+//   2. Agregar app web → copiar el objeto firebaseConfig
+//   3. Habilitar Authentication → Email/Password
+//   4. Crear Firestore Database (modo producción)
+//   5. Pegar los valores reales reemplazando los "CONFIGURE_ME"
+//  Sin configurar → la app funciona en modo local sin login.
+// ═══════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "CONFIGURE_ME",
+  authDomain:        "CONFIGURE_ME.firebaseapp.com",
+  projectId:         "CONFIGURE_ME",
+  storageBucket:     "CONFIGURE_ME.appspot.com",
+  messagingSenderId: "CONFIGURE_ME",
+  appId:             "CONFIGURE_ME"
+};
+const FB_ENABLED = FIREBASE_CONFIG.apiKey !== "CONFIGURE_ME";
+let fbAuth = null, fbDb = null, fbUser = null;
+
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
@@ -876,6 +965,7 @@ let weekShiftId    = null;  // shift activo en pestaña Semana
 // ═══════════════════════════════════════════════
 function save() {
   try { localStorage.setItem('rg_v3', JSON.stringify(S)); } catch(e){}
+  if (FB_ENABLED && fbUser) saveToFirebase();
 }
 function load() {
   try {
@@ -1039,12 +1129,13 @@ function renderMapRoutes(routes, type) {
 // ═══════════════════════════════════════════════
 async function geocode(address) {
   try {
-    // Append city context so "Av. Circunvalación 1545" resuelve en la ciudad correcta
+    // Si hay ciudad configurada, se agrega a la búsqueda para evitar geocodificar en la ciudad equivocada
     const query = S.city ? `${address}, ${S.city}` : address;
     let url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ar&q=${encodeURIComponent(query)}`;
-    // Bias de proximidad: prioriza resultados cerca de la fábrica (±0.4 grados ≈ 40 km)
-    if (S.factory.lat) {
-      const d = 0.4;
+    // Bias de proximidad con viewbox solo cuando NO hay ciudad configurada
+    // (cuando hay ciudad, el texto ya es suficientemente específico)
+    if (S.factory.lat && !S.city) {
+      const d = 0.5;
       const vb = `${S.factory.lng-d},${S.factory.lat+d},${S.factory.lng+d},${S.factory.lat-d}`;
       url += `&viewbox=${vb}&bounded=0`;
     }
@@ -1662,6 +1753,14 @@ function doShareCopy() {
 function renderAttendance() {
   const date=document.getElementById('route-date').value;
   const sk=_sk(date);
+  // Auto-poblar con empleados cuyo turno habitual coincide, la primera vez que se ve este día+turno
+  if (S.attendance[sk]===undefined && date && currentShiftId) {
+    const anyHasDef=S.employees.some(e=>e.active!==false&&e.defaultShiftId);
+    const auto=anyHasDef
+      ? S.employees.filter(e=>e.active!==false&&e.defaultShiftId===currentShiftId).map(e=>e.id)
+      : [];
+    if (auto.length){S.attendance[sk]=auto;save();}
+  }
   const presentIds=new Set(S.attendance[sk]||[]);
   const active=S.employees.filter(e=>e.active!==false);
   const el=document.getElementById('att-list');
@@ -1719,7 +1818,12 @@ function getOrInitPlan(date, type) {
   const wsk=_wsk(date);
   if (!S.weekPlan[wsk]) S.weekPlan[wsk]={};
   if (!S.weekPlan[wsk][type]) {
-    S.weekPlan[wsk][type]=S.employees.filter(e=>e.active!==false).map(e=>e.id);
+    const sid=weekShiftId||S.shifts[0]?.id;
+    const anyHasDef=S.employees.some(e=>e.active!==false&&e.defaultShiftId);
+    // Si algún empleado tiene turno fijo → filtrar por turno; si no → todos (comportamiento anterior)
+    S.weekPlan[wsk][type]=S.employees
+      .filter(e=>e.active!==false&&(!anyHasDef||e.defaultShiftId===sid))
+      .map(e=>e.id);
   }
   return S.weekPlan[wsk][type];
 }
@@ -1915,9 +2019,10 @@ function renderEmployees() {
   const empty=document.getElementById('emp-empty');
   if (!list.length&&!S.employees.length) { tbody.innerHTML=''; empty.style.display=''; return; }
   empty.style.display='none';
-  tbody.innerHTML=list.map(e=>`
-    <tr>
-      <td><strong>${escHtml(e.name)}</strong>${e.phone?`<br><small style="color:var(--muted)">${escHtml(e.phone)}</small>`:''}</td>
+  tbody.innerHTML=list.map(e=>{
+    const defSh=e.defaultShiftId?S.shifts.find(s=>s.id===e.defaultShiftId):null;
+    return `<tr>
+      <td><strong>${escHtml(e.name)}</strong>${e.phone?`<br><small style="color:var(--muted)">${escHtml(e.phone)}</small>`:''}${defSh?`<br><span style="display:inline-flex;align-items:center;gap:3px;color:#fff;background:${defSh.color};padding:1px 8px;border-radius:9999px;margin-top:3px;font-size:10px;font-weight:700">${escHtml(defSh.name)}</span>`:''}</td>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${escHtml(e.address||'—')}</td>
       <td>${e.lat?`<span class="badge badge-green">✓ ${(+e.lat).toFixed(3)}, ${(+e.lng).toFixed(3)}</span>`:'<span class="badge badge-amber">Sin coords</span>'}</td>
       <td>${e.active!==false?'<span class="badge badge-green">Activo</span>':'<span class="badge badge-red">Inactivo</span>'}</td>
@@ -1925,7 +2030,8 @@ function renderEmployees() {
         <button class="btn btn-ghost btn-sm" onclick="openEmpModal('${e.id}')">Editar</button>
         <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e.id}')">Eliminar</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 function openEmpModal(id) {
   editEmpId=id||null;
@@ -1934,6 +2040,10 @@ function openEmpModal(id) {
   document.getElementById('emp-map-coords').textContent='';
   const btn=document.getElementById('emp-geo-btn');
   delete btn.dataset.lat; delete btn.dataset.lng;
+  // Poblar opciones de turno habitual
+  const shiftSel=document.getElementById('emp-default-shift');
+  shiftSel.innerHTML=`<option value="">— Sin turno fijo —</option>`+
+    S.shifts.map(sh=>`<option value="${sh.id}">${escHtml(sh.name)} (${sh.start}–${sh.end})</option>`).join('');
   if (id) {
     const e=S.employees.find(x=>x.id===id);
     if (e) {
@@ -1941,11 +2051,12 @@ function openEmpModal(id) {
       document.getElementById('emp-addr').value=e.address||'';
       document.getElementById('emp-phone').value=e.phone||'';
       document.getElementById('emp-active').checked=e.active!==false;
+      shiftSel.value=e.defaultShiftId||'';
       if (e.lat) {
         btn.dataset.lat=e.lat; btn.dataset.lng=e.lng;
         document.getElementById('emp-geo-result').innerHTML=`<span style="color:var(--green)">✅ ${(+e.lat).toFixed(4)}, ${(+e.lng).toFixed(4)}</span>`;
         openModal('emp-modal');
-        setTimeout(()=>showEmpMap(e.lat, e.lng), 80); // esperar que el modal esté visible
+        setTimeout(()=>showEmpMap(e.lat, e.lng), 80);
         return;
       }
     }
@@ -1954,6 +2065,7 @@ function openEmpModal(id) {
     document.getElementById('emp-addr').value='';
     document.getElementById('emp-phone').value='';
     document.getElementById('emp-active').checked=true;
+    shiftSel.value='';
   }
   hideEmpMap();
   openModal('emp-modal');
@@ -1963,15 +2075,16 @@ function saveEmployee() {
   const addr=document.getElementById('emp-addr').value.trim();
   const phone=document.getElementById('emp-phone').value.trim();
   const active=document.getElementById('emp-active').checked;
+  const defaultShiftId=document.getElementById('emp-default-shift').value||null;
   const btn=document.getElementById('emp-geo-btn');
   const lat=btn.dataset.lat?+btn.dataset.lat:null;
   const lng=btn.dataset.lng?+btn.dataset.lng:null;
   if (!name) { toast('Ingresá el nombre'); return; }
   if (editEmpId) {
     const e=S.employees.find(x=>x.id===editEmpId);
-    if (e) { e.name=name;e.address=addr;e.phone=phone;e.active=active;if(lat){e.lat=lat;e.lng=lng;} }
+    if (e) { e.name=name;e.address=addr;e.phone=phone;e.active=active;e.defaultShiftId=defaultShiftId;if(lat){e.lat=lat;e.lng=lng;} }
   } else {
-    S.employees.push({id:uid(),name,address:addr,phone,active,lat,lng});
+    S.employees.push({id:uid(),name,address:addr,phone,active,lat,lng,defaultShiftId});
   }
   save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
   toast(editEmpId?'✅ Empleado actualizado':'✅ Empleado agregado');
@@ -2079,6 +2192,113 @@ function toast(msg) {
 }
 function uid()    { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════
+//  FIREBASE – Login & sincronización multi-dispositivo
+// ═══════════════════════════════════════════════
+function initFirebase() {
+  if (!FB_ENABLED) return; // modo local sin login
+  const loginScreen = document.getElementById('login-screen');
+  loginScreen.classList.add('open');
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth = firebase.auth();
+    fbDb   = firebase.firestore();
+    fbAuth.onAuthStateChanged(async user => {
+      if (user) {
+        fbUser = user;
+        await loadFromFirebase();
+        loginScreen.classList.remove('open');
+        const logoutBtn = document.getElementById('fb-logout-btn');
+        if (logoutBtn) logoutBtn.style.display = 'flex';
+        document.getElementById('fb-user-info').textContent = user.email;
+        // Re-renderizar con datos sincronizados
+        currentShiftId = S.shifts[0]?.id || null;
+        weekShiftId    = S.shifts[0]?.id || null;
+        renderShiftBar(); renderWeekShiftBar();
+        renderAttendance(); renderEmployees(); renderVehicles(); loadSavedRoutes();
+      } else {
+        fbUser = null;
+        loginScreen.classList.add('open');
+        const logoutBtn = document.getElementById('fb-logout-btn');
+        if (logoutBtn) logoutBtn.style.display = 'none';
+      }
+    });
+  } catch(e) {
+    console.warn('Firebase init error:', e);
+    loginScreen.classList.remove('open');
+    toast('⚠️ Error al iniciar Firebase');
+  }
+}
+
+async function doLogin() {
+  if (!FB_ENABLED) return;
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+  if (!email || !pw) { errEl.textContent = 'Completá email y contraseña'; return; }
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Ingresando…';
+  try {
+    await fbAuth.signInWithEmailAndPassword(email, pw);
+    // onAuthStateChanged maneja el resto
+  } catch(e) {
+    let msg = 'Email o contraseña incorrectos';
+    if (e.code === 'auth/too-many-requests')       msg = 'Demasiados intentos. Esperá un momento.';
+    if (e.code === 'auth/user-not-found')          msg = 'No existe cuenta con ese email';
+    if (e.code === 'auth/network-request-failed')  msg = 'Error de red. Verificá tu conexión.';
+    if (e.code === 'auth/invalid-credential')      msg = 'Email o contraseña incorrectos';
+    errEl.textContent = msg;
+    btn.disabled = false;
+    btn.innerHTML = 'Ingresar';
+  }
+}
+
+async function doLogout() {
+  if (FB_ENABLED && fbAuth) await fbAuth.signOut();
+}
+
+async function loadFromFirebase() {
+  if (!fbDb || !fbUser) return;
+  try {
+    const doc = await fbDb.collection('orgs').doc(fbUser.uid).get();
+    if (doc.exists && doc.data()?.state) {
+      const remote = JSON.parse(doc.data().state);
+      S = Object.assign({}, S, remote);
+      if (!S.shifts?.length) S.shifts = JSON.parse(JSON.stringify(DEFAULT_SHIFTS));
+      // Re-ejecutar migración por si los datos remotos son viejos
+      const firstId = S.shifts[0].id;
+      ['attendance','routes','weekPlan'].forEach(k => {
+        const obj = S[k];
+        Object.keys(obj).forEach(key => {
+          if (!key.includes('__')) {
+            const nk = key + '__' + firstId;
+            if (obj[nk] === undefined) obj[nk] = obj[key];
+            delete obj[key];
+          }
+        });
+      });
+      localStorage.setItem('rg_v3', JSON.stringify(S));
+    }
+  } catch(e) { console.warn('Firebase load error:', e); }
+}
+
+let _fbSaveTimer = null;
+function saveToFirebase() {
+  // Debounce: agrupa múltiples saves rápidos en una sola escritura
+  clearTimeout(_fbSaveTimer);
+  _fbSaveTimer = setTimeout(async () => {
+    if (!fbDb || !fbUser) return;
+    try {
+      await fbDb.collection('orgs').doc(fbUser.uid).set({
+        state: JSON.stringify(S),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { console.warn('Firebase save error:', e); }
+  }, 600);
+}
 
 // ═══════════════════════════════════════════════
 //  TURNOS – Shift management
@@ -2211,6 +2431,9 @@ function init() {
   gBtn.textContent='🌐 Geocodificar faltantes';
   gBtn.onclick=geocodeAllMissing;
   toolbar.appendChild(gBtn);
+
+  // Firebase: login y sync multi-dispositivo (si está configurado)
+  initFirebase();
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>

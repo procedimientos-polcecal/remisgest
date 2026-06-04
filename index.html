@@ -488,6 +488,25 @@ tbody tr:hover td{background:var(--blue-l)}
 .share-msg:focus{outline:none;border-color:var(--blue);background:#fff}
 .share-all-bar{display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;gap:8px}
 
+/* ─── Historial & Plantillas ─── */
+.hist-date-group{margin-bottom:20px}
+.hist-date-label{
+  font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted-l);
+  margin-bottom:8px;padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+.hist-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:11px 14px;border-radius:var(--r-sm);
+  border:1px solid var(--border);background:#fff;
+  margin-bottom:8px;transition:border-color .15s;
+}
+.hist-item:hover{border-color:var(--blue-ll)}
+.hist-item-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.hist-item-meta{font-size:11.5px;color:var(--muted);margin-bottom:2px}
+.hist-item-detail{font-size:11px;color:var(--muted-l);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px}
+
 /* ─── Generating overlay ─── */
 #gen-overlay{
   display:none;position:fixed;inset:0;
@@ -597,6 +616,7 @@ tbody tr:hover td{background:var(--blue-l)}
   <button onclick="showTab('empleados')" id="nav-empleados">👥 Empleados</button>
   <button onclick="showTab('vehiculos')" id="nav-vehiculos">🚗 Vehículos</button>
   <button onclick="showTab('config')" id="nav-config">⚙️ Configuración</button>
+  <button onclick="showTab('historial')" id="nav-historial">📋 Historial</button>
 </nav>
 
 <!-- ══════════════ TAB HOY ══════════════ -->
@@ -751,6 +771,21 @@ tbody tr:hover td{background:var(--blue-l)}
   </div>
 </div>
 
+<!-- ══════════════ TAB HISTORIAL ══════════════ -->
+<div id="tab-historial" class="tab">
+  <div style="max-width:700px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <h2 style="font-size:15px;font-weight:700;color:var(--text)">💾 Plantillas guardadas</h2>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Configuraciones de remises guardadas para reutilizar la semana siguiente.</p>
+    <div id="presets-list"></div>
+    <br>
+    <h2 style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">📋 Historial de rutas</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Se registra automáticamente cada vez que generás rutas. Últimas 60 configuraciones.</p>
+    <div id="history-list"></div>
+  </div>
+</div>
+
 <!-- ══════════════ MODAL EMPLEADO ══════════════ -->
 <div class="overlay" id="emp-modal">
   <div class="modal">
@@ -898,6 +933,45 @@ tbody tr:hover td{background:var(--blue-l)}
   </div>
 </div>
 
+<!-- ══════════════ MODAL GUARDAR PLANTILLA ══════════════ -->
+<div class="overlay" id="preset-save-modal">
+  <div class="modal" style="max-width:420px">
+    <h2>💾 Guardar como plantilla</h2>
+    <div class="form-group">
+      <label>Nombre de la plantilla</label>
+      <input class="form-control" id="preset-name-input" placeholder="Ej: Lunes tipo – IDA Mañana"
+        onkeydown="if(event.key==='Enter')confirmSavePreset()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('preset-save-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmSavePreset()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL APLICAR PLANTILLA/HISTORIAL ══════════════ -->
+<div class="overlay" id="apply-preset-modal">
+  <div class="modal" style="max-width:420px">
+    <h2 id="apply-modal-title">Aplicar configuración</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Se calcularán las rutas con los mismos remises y empleados. Podés cambiar la fecha y el tipo de viaje.</p>
+    <div class="form-group">
+      <label>Fecha de aplicación</label>
+      <input class="form-control" id="apply-date-input" type="date">
+    </div>
+    <div class="form-group">
+      <label>Tipo de viaje</label>
+      <select class="form-control" id="apply-type-select">
+        <option value="morning">🌅 IDA (Búsqueda)</option>
+        <option value="evening">🌆 VUELTA (Retorno)</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('apply-preset-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmApplyPreset()">▶ Aplicar y calcular rutas</button>
+    </div>
+  </div>
+</div>
+
 <div id="gen-overlay">
   <div class="gen-spin"></div>
   <span id="gen-overlay-msg">Calculando rutas…</span>
@@ -946,14 +1020,18 @@ let S = {
   employees: [],
   vehicles:  [],
   shifts:    JSON.parse(JSON.stringify(DEFAULT_SHIFTS)),
-  attendance:{},   // 'YYYY-MM-DD__shiftId' -> [id,...]
-  routes:    {},   // 'YYYY-MM-DD__shiftId' -> {morning:[...], evening:[...]}
-  weekPlan:  {},   // 'YYYY-MM-DD__shiftId' -> {morning:[ids], evening:[ids]}
+  attendance:{},      // 'YYYY-MM-DD__shiftId' -> [id,...]
+  routes:    {},      // 'YYYY-MM-DD__shiftId' -> {morning:[...], evening:[...]}
+  weekPlan:  {},      // 'YYYY-MM-DD__shiftId' -> {morning:[ids], evening:[ids]}
+  routePresets: [],   // plantillas guardadas
+  history:   [],      // historial automático (últimas 60 entradas)
   speed: 40,
   city: ''
 };
 
 let editEmpId = null, editVehId = null, editShiftId = null;
+let _presetTypeCtx = null, _presetHistSrcId = null;
+let _applySourceId = null, _applyIsPreset = false;
 let map = null, cfgMap = null, mapLayers = [], cfgMarker = null;
 let empModalMap = null, empMarker = null;
 let weekOffset = 0, selectedWeekDate = null;
@@ -980,6 +1058,9 @@ function load() {
     if (!S.shifts || !S.shifts.length) {
       S.shifts = JSON.parse(JSON.stringify(DEFAULT_SHIFTS));
     }
+    // nuevos campos — compatibilidad con datos guardados anteriores
+    if (!S.routePresets) S.routePresets = [];
+    if (!S.history)      S.history      = [];
     // Migrate old flat keys (pre-turnos) to shift-keyed format
     const firstId = S.shifts[0].id;
     ['attendance','routes','weekPlan'].forEach(k => {
@@ -1012,6 +1093,7 @@ function showTab(name) {
   if (name === 'empleados') renderEmployees();
   if (name === 'vehiculos') renderVehicles();
   if (name === 'config')    loadConfig();
+  if (name === 'historial') renderHistorialTab();
 }
 
 function hoyTab(name) {
@@ -1427,6 +1509,7 @@ async function generateRoutes(type, employeeOverride) {
   const sk=_sk(date);
   if (!S.routes[sk]) S.routes[sk]={};
   S.routes[sk][type]=routes;
+  addToHistory(date, type, routes); // registrar en historial automático
   save();
   renderRouteCards(routes, type);
   renderMapRoutes(routes, type);
@@ -1529,9 +1612,13 @@ function renderRouteCards(routes, type) {
         <button class="btn btn-whatsapp btn-sm" onclick="openShareRoute(${ri},'${type}')">📤 Compartir</button>
         <button class="btn btn-ghost btn-sm" onclick="printRoute(${ri},'${type}')">🖨️ Imprimir</button>
         <button class="btn btn-ghost btn-sm" onclick="copyRouteText(${ri},'${type}')">📋 Copiar</button>
+        ${routes.length>1?`<button class="btn btn-danger btn-sm" onclick="removeRouteVehicle(${ri},'${type}')" title="Quitar este remis y redistribuir sus pasajeros">🚫 Quitar remis</button>`:''}
       </div>
     </div>`;
-  }).join('');
+  }).join('') +
+  `<div style="padding:6px 2px 10px;text-align:right">
+     <button class="btn btn-ghost btn-sm" onclick="openSavePresetModal('${type}')">💾 Guardar como plantilla</button>
+   </div>`;
 }
 
 // ═══════════════════════════════════════════════
@@ -2238,6 +2325,239 @@ function toast(msg) {
 }
 function uid()    { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════
+//  QUITAR REMIS DE RUTA CALCULADA
+// ═══════════════════════════════════════════════
+function removeRouteVehicle(routeIdx, type) {
+  const date = document.getElementById('route-date').value;
+  const routes = S.routes[_sk(date)]?.[type];
+  if (!routes) return;
+  if (routes.length <= 1) { toast('No se puede quitar el único remis activo'); return; }
+
+  const removed   = routes[routeIdx];
+  const toRedist  = removed.stops.filter(s => !s.isFactory);
+  routes.splice(routeIdx, 1);
+
+  // Redistribuir al remis con menor ratio ocupación/capacidad
+  for (const stop of toRedist) {
+    let bestRi = 0, bestRatio = Infinity;
+    routes.forEach((r, i) => {
+      const n   = r.stops.filter(s => !s.isFactory).length;
+      const cap = +(r.vehicle.capacity)||8;
+      if (n/cap < bestRatio) { bestRatio = n/cap; bestRi = i; }
+    });
+    const fi = routes[bestRi].stops.findIndex(s => s.isFactory);
+    routes[bestRi].stops.splice(fi !== -1 ? fi : routes[bestRi].stops.length, 0, stop);
+    routes[bestRi].geometry = null;
+  }
+
+  S.routes[_sk(date)][type] = routes;
+  save();
+  renderRouteCards(routes, type);
+  renderMapRoutes(routes, type);
+  toast(`Remis quitado — ${toRedist.length} empleados redistribuidos`);
+  routes.forEach((_, i) => refreshRouteGeometry(i, routes, type, date));
+}
+
+// ═══════════════════════════════════════════════
+//  HISTORIAL AUTOMÁTICO
+// ═══════════════════════════════════════════════
+function addToHistory(date, type, routes) {
+  if (!routes?.length) return;
+  const entry = {
+    id:      uid(),
+    date,
+    shiftId: currentShiftId || S.shifts[0]?.id || '',
+    type,
+    savedAt: Date.now(),
+    groups:  routes.map(r => ({
+      vehicleId:   r.vehicle.id,
+      vehicleName: r.vehicle.name,
+      empIds:      r.stops.filter(s=>!s.isFactory).map(s=>s.id),
+      empNames:    r.stops.filter(s=>!s.isFactory).map(s=>s.name)
+    }))
+  };
+  // Si ya existe la misma fecha+tipo+turno, reemplazar
+  const idx = S.history.findIndex(h=>h.date===date&&h.type===type&&h.shiftId===entry.shiftId);
+  if (idx !== -1) S.history.splice(idx, 1, entry);
+  else            S.history.unshift(entry);
+  if (S.history.length > 60) S.history = S.history.slice(0, 60);
+}
+
+// ═══════════════════════════════════════════════
+//  PLANTILLAS – Guardar y aplicar
+// ═══════════════════════════════════════════════
+function openSavePresetModal(type, histSrcId) {
+  _presetTypeCtx    = type;
+  _presetHistSrcId  = histSrcId || null;
+  let name;
+  if (histSrcId) {
+    const h  = S.history.find(x=>x.id===histSrcId);
+    const sh = S.shifts.find(s=>s.id===h?.shiftId);
+    name = `${sh?.name||''} ${type==='morning'?'IDA':'VUELTA'} – ${h?.date||''}`.trim();
+  } else {
+    const sh = S.shifts.find(s=>s.id===currentShiftId);
+    name = `${sh?.name||''} ${type==='morning'?'IDA':'VUELTA'}`.trim();
+  }
+  document.getElementById('preset-name-input').value = name;
+  openModal('preset-save-modal');
+}
+
+function confirmSavePreset() {
+  const name = document.getElementById('preset-name-input').value.trim();
+  if (!name) { toast('Ingresá un nombre'); return; }
+  let groups, type, shiftId;
+  if (_presetHistSrcId) {
+    const h  = S.history.find(x=>x.id===_presetHistSrcId);
+    if (!h) { toast('Error: entrada de historial no encontrada'); return; }
+    groups  = h.groups; type = h.type; shiftId = h.shiftId;
+  } else {
+    const date   = document.getElementById('route-date').value;
+    const routes = S.routes[_sk(date)]?.[_presetTypeCtx];
+    if (!routes?.length) { toast('No hay rutas para guardar'); closeModal('preset-save-modal'); return; }
+    groups  = routes.map(r=>({
+      vehicleId:r.vehicle.id, vehicleName:r.vehicle.name,
+      empIds:r.stops.filter(s=>!s.isFactory).map(s=>s.id),
+      empNames:r.stops.filter(s=>!s.isFactory).map(s=>s.name)
+    }));
+    type    = _presetTypeCtx;
+    shiftId = currentShiftId || S.shifts[0]?.id || '';
+  }
+  S.routePresets.unshift({id:uid(), name, type, shiftId,
+    createdAt: new Date().toISOString().split('T')[0], groups});
+  _presetHistSrcId = null;
+  save(); closeModal('preset-save-modal');
+  toast(`✅ Plantilla "${name}" guardada`);
+  if (document.getElementById('tab-historial').classList.contains('active')) renderPresetsSection();
+}
+
+function deletePreset(id) {
+  if (!confirm('¿Eliminar esta plantilla?')) return;
+  S.routePresets = S.routePresets.filter(p=>p.id!==id);
+  save(); renderPresetsSection(); toast('Plantilla eliminada');
+}
+
+function openApplyModal(id, isPreset) {
+  _applySourceId = id; _applyIsPreset = isPreset;
+  const src = isPreset ? S.routePresets.find(p=>p.id===id) : S.history.find(h=>h.id===id);
+  if (!src) return;
+  const typeLabel = src.type==='morning'?'🌅 IDA':'🌆 VUELTA';
+  const sh = S.shifts.find(s=>s.id===src.shiftId);
+  document.getElementById('apply-modal-title').textContent =
+    isPreset ? `Aplicar plantilla: ${src.name}` : `Reutilizar config – ${src.date} · ${typeLabel}${sh?' · '+sh.name:''}`;
+  document.getElementById('apply-date-input').value = new Date().toISOString().split('T')[0];
+  document.getElementById('apply-type-select').value = src.type;
+  openModal('apply-preset-modal');
+}
+
+async function confirmApplyPreset() {
+  const src = _applyIsPreset
+    ? S.routePresets.find(p=>p.id===_applySourceId)
+    : S.history.find(h=>h.id===_applySourceId);
+  if (!src) return;
+  const date = document.getElementById('apply-date-input').value;
+  const type = document.getElementById('apply-type-select').value;
+  if (!date) { toast('Seleccioná una fecha'); return; }
+  closeModal('apply-preset-modal');
+  const shiftExists = S.shifts.find(s=>s.id===src.shiftId);
+  if (shiftExists) currentShiftId = src.shiftId;
+  setGenerating(true, 'Aplicando configuración guardada…');
+  const factory = {...S.factory, name:S.factory.name||'Fábrica', isFactory:true};
+  const routes  = [];
+  for (const g of src.groups) {
+    const veh = S.vehicles.find(v=>v.id===g.vehicleId);
+    if (!veh) { toast(`⚠️ Vehículo "${g.vehicleName}" ya no existe`); continue; }
+    const empObjs = g.empIds.map(id=>S.employees.find(e=>e.id===id)).filter(e=>e&&e.lat&&e.lng);
+    if (!empObjs.length) continue;
+    const stops = type==='morning'
+      ? [...empObjs.map(e=>({...e,isFactory:false})), factory]
+      : [factory, ...empObjs.map(e=>({...e,isFactory:false}))];
+    const res = await getRouteGeometry(stops);
+    const km  = res ? res.distance.toFixed(1) : routeDist(stops).toFixed(1);
+    const min = res ? Math.round(res.duration) : Math.round((+km)/(S.speed||40)*60);
+    routes.push({vehicle:veh, stops, type, km, min, geometry:res?.geometry||null});
+  }
+  setGenerating(false);
+  if (!routes.length) { toast('No se pudo aplicar: verificá que los vehículos y empleados sigan activos'); return; }
+  const allEmpIds = [...new Set(src.groups.flatMap(g=>g.empIds))];
+  S.attendance[_sk(date)] = allEmpIds;
+  const sk = _sk(date);
+  if (!S.routes[sk]) S.routes[sk]={};
+  S.routes[sk][type] = routes;
+  addToHistory(date, type, routes);
+  save();
+  document.getElementById('route-date').value = date;
+  showTab('hoy'); renderShiftBar(); renderAttendance();
+  renderRouteCards(routes, type); renderMapRoutes(routes, type);
+  hoyTab(type==='morning'?'ida':'vuelta');
+  toast(`✅ Aplicado — ${routes.length} remis`);
+}
+
+// ═══════════════════════════════════════════════
+//  HISTORIAL – Renderizado
+// ═══════════════════════════════════════════════
+function renderHistorialTab() {
+  renderPresetsSection();
+  renderHistorySection();
+}
+
+function renderPresetsSection() {
+  const el = document.getElementById('presets-list'); if (!el) return;
+  if (!S.routePresets.length) {
+    el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:10px 0">No hay plantillas guardadas. Generá rutas y usá el botón "💾 Guardar como plantilla".</p>';
+    return;
+  }
+  el.innerHTML = S.routePresets.map(p => {
+    const sh    = S.shifts.find(s=>s.id===p.shiftId);
+    const lbl   = p.type==='morning'?'🌅 IDA':'🌆 VUELTA';
+    const total = p.groups.reduce((s,g)=>s+g.empIds.length,0);
+    return `<div class="hist-item">
+      <div style="flex:1;min-width:0">
+        <div class="hist-item-title">${escHtml(p.name)}</div>
+        <div class="hist-item-meta">${lbl}${sh?` · <span style="color:${sh.color};font-weight:700">${escHtml(sh.name)}</span>`:''} · ${p.groups.length} remis · ${total} empleados · ${p.createdAt}</div>
+        <div class="hist-item-detail">${p.groups.map(g=>`${escHtml(g.vehicleName)}: ${g.empNames.slice(0,3).map(n=>n.split(' ')[0]).join(', ')}${g.empNames.length>3?'…':''}`).join(' | ')}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:flex-start">
+        <button class="btn btn-primary btn-sm" onclick="openApplyModal('${p.id}',true)">▶ Aplicar</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePreset('${p.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderHistorySection() {
+  const el = document.getElementById('history-list'); if (!el) return;
+  if (!S.history.length) {
+    el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:10px 0">Sin historial aún. Se registra automáticamente cada vez que generás rutas.</p>';
+    return;
+  }
+  // Agrupar por fecha
+  const byDate = {};
+  S.history.forEach(h=>{ if (!byDate[h.date]) byDate[h.date]=[]; byDate[h.date].push(h); });
+  el.innerHTML = Object.entries(byDate).map(([date, entries]) => {
+    const [y,m,d] = date.split('-');
+    const dateStr = `${+d}/${+m}/${y}`;
+    const rows = entries.map(h => {
+      const sh    = S.shifts.find(s=>s.id===h.shiftId);
+      const lbl   = h.type==='morning'?'🌅 IDA':'🌆 VUELTA';
+      const total = h.groups.reduce((s,g)=>s+g.empIds.length,0);
+      const time  = new Date(h.savedAt).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="hist-item">
+        <div style="flex:1;min-width:0">
+          <div class="hist-item-title">${lbl}${sh?` <span style="color:${sh.color};font-weight:700">${escHtml(sh.name)}</span>`:''}</div>
+          <div class="hist-item-meta">${h.groups.length} remis · ${total} empleados · ${time} hs</div>
+          <div class="hist-item-detail">${h.groups.map(g=>`${escHtml(g.vehicleName)}: ${g.empNames.slice(0,3).map(n=>n.split(' ')[0]).join(', ')}${g.empNames.length>3?'…':''}`).join(' | ')}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0;align-items:flex-start">
+          <button class="btn btn-outline btn-sm" onclick="openApplyModal('${h.id}',false)">↩ Reutilizar</button>
+          <button class="btn btn-ghost btn-sm" title="Guardar como plantilla" onclick="openSavePresetModal('${h.type}','${h.id}')">💾</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="hist-date-group"><div class="hist-date-label">📅 ${dateStr}</div>${rows}</div>`;
+  }).join('');
+}
 
 // ═══════════════════════════════════════════════
 //  FIREBASE – Login & sincronización multi-dispositivo

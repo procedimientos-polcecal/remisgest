@@ -1240,6 +1240,40 @@ function kMeans(points, k, iters=15) {
 }
 function routeDist(stops){let t=0;for(let i=0;i<stops.length-1;i++)t+=dist(stops[i],stops[i+1]);return t;}
 
+// Clustering geográfico que respeta la capacidad de cada vehículo.
+// Arranca con k-means y luego rebalance: mueve empleados de clusters saturados
+// al cluster vecino más cercano que todavía tiene espacio.
+function clusterWithCapacity(emps, vehicles) {
+  const k = vehicles.length;
+  if (!k) return [];
+  if (k === 1 || emps.length <= 1) return emps.map(() => 0);
+  const caps = vehicles.map(v => Math.max(1, +(v.capacity)||8));
+  let assign = kMeans(emps, k).slice();
+  const maxPasses = emps.length * k * 2;
+  for (let pass = 0; pass < maxPasses; pass++) {
+    const counts = Array(k).fill(0);
+    assign.forEach(c => counts[c]++);
+    const over = counts.findIndex((c, i) => c > caps[i]);
+    if (over === -1) break; // todos dentro de capacidad
+    let bestEi = -1, bestCi = -1, bestD = Infinity;
+    for (let ei = 0; ei < emps.length; ei++) {
+      if (assign[ei] !== over) continue;
+      for (let ci = 0; ci < k; ci++) {
+        if (ci === over || counts[ci] >= caps[ci]) continue;
+        const members = emps.filter((_, j) => assign[j] === ci);
+        const d = members.length
+          ? dist(emps[ei], {lat:members.reduce((s,e)=>s+e.lat,0)/members.length,
+                             lng:members.reduce((s,e)=>s+e.lng,0)/members.length})
+          : dist(emps[ei], emps[Math.floor(emps.length/2)]);
+        if (d < bestD) { bestD = d; bestEi = ei; bestCi = ci; }
+      }
+    }
+    if (bestEi === -1) break; // sin espacio disponible en ningún cluster
+    assign[bestEi] = bestCi;
+  }
+  return assign;
+}
+
 // ═══════════════════════════════════════════════
 //  OSRM – Real road routing
 // ═══════════════════════════════════════════════
@@ -1321,7 +1355,19 @@ async function generateRoutes(type, employeeOverride) {
   setGenerating(true, `Obteniendo matriz de distancias para ${emps.length} empleados…`);
 
   const factory = {...S.factory, name:S.factory.name||'Fábrica', isFactory:true};
-  const k = Math.min(S.vehicles.length, emps.length);
+
+  // Ordenar vehículos por capacidad desc: llenar los más grandes primero
+  const sortedVehs = S.vehicles.slice().sort((a,b) => (+(b.capacity)||8) - (+(a.capacity)||8));
+  // Calcular mínimo de vehículos necesarios para cubrir todos los empleados
+  let k = 0, totalCap = 0;
+  for (const v of sortedVehs) {
+    if (totalCap >= emps.length) break;
+    k++; totalCap += (+(v.capacity)||8);
+  }
+  k = Math.min(k, sortedVehs.length);
+  const vehsToUse = sortedVehs.slice(0, k);
+  if (totalCap < emps.length)
+    toast(`⚠️ Capacidad total (${totalCap}) < empleados (${emps.length}). Se repartirán de todas formas.`);
 
   // allPoints: factory at index 0, employees at 1..N
   const allPoints = [factory, ...emps];
@@ -1331,14 +1377,14 @@ async function generateRoutes(type, employeeOverride) {
   const osrmTable = await getDistanceMatrix(allPoints);
   if (osrmTable) durationMatrix = osrmTable.durations;
 
-  // Cluster employees geographically into k groups
-  const assign = k===1 ? emps.map(()=>0) : kMeans(emps, k);
+  // Clustering geográfico respetando capacidad de cada vehículo
+  const assign = clusterWithCapacity(emps, vehsToUse);
 
   const routes = [];
   for (let vi=0; vi<k; vi++) {
     const grpEmps = emps.filter((_,i) => assign[i]===vi);
     if (!grpEmps.length) continue;
-    const veh = S.vehicles[vi];
+    const veh = vehsToUse[vi];
 
     // Indices inside allPoints for this group's employees
     const empIdxInAll = grpEmps.map(e => emps.indexOf(e) + 1);
@@ -1472,7 +1518,7 @@ function renderRouteCards(routes, type) {
         <div class="route-stats">
           <span class="stat-chip stat-chip-km">📏 ${r.km} km</span>
           <span class="stat-chip stat-chip-min">⏱ ~${r.min} min</span>
-          <span class="stat-chip stat-chip-pax">👥 ${empCount}</span>
+          <span class="stat-chip stat-chip-pax">👥 ${empCount}${r.vehicle.capacity?'/'+r.vehicle.capacity:''}</span>
           ${isOsrm?'<span class="stat-chip stat-chip-road">🛣️ real</span>':''}
         </div>
       </div>

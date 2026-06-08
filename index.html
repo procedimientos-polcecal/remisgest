@@ -934,6 +934,27 @@ tbody tr:hover td{background:var(--blue-l)}
 </div>
 
 <!-- ══════════════ MODAL GUARDAR PLANTILLA ══════════════ -->
+<!-- ══════════════ MODAL AGREGAR REMIS ══════════════ -->
+<div class="overlay" id="add-route-modal">
+  <div class="modal" style="max-width:480px">
+    <h2>➕ Agregar remis</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Seleccioná el vehículo y los empleados para esta ruta adicional.</p>
+    <div class="form-group">
+      <label>Vehículo</label>
+      <select class="form-control" id="add-route-vehicle-select"></select>
+    </div>
+    <div class="form-group">
+      <label>Empleados a incluir</label>
+      <div id="add-route-emp-list" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-route-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddRoute()">▶ Calcular y agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL GUARDAR PLANTILLA ══════════════ -->
 <div class="overlay" id="preset-save-modal">
   <div class="modal" style="max-width:420px">
     <h2>💾 Guardar como plantilla</h2>
@@ -1032,6 +1053,7 @@ let S = {
 let editEmpId = null, editVehId = null, editShiftId = null;
 let _presetTypeCtx = null, _presetHistSrcId = null;
 let _applySourceId = null, _applyIsPreset = false;
+let _addRouteType  = null;
 let map = null, cfgMap = null, mapLayers = [], cfgMarker = null;
 let empModalMap = null, empMarker = null;
 let weekOffset = 0, selectedWeekDate = null;
@@ -1519,6 +1541,8 @@ async function generateRoutes(type, employeeOverride) {
 }
 
 function clearRoutes() {
+  const date = document.getElementById('route-date').value;
+  if (date) { delete S.routes[_sk(date)]; save(); }
   clearMapLayers();
   document.getElementById('routes-morning').innerHTML='';
   document.getElementById('routes-evening').innerHTML='';
@@ -1612,11 +1636,12 @@ function renderRouteCards(routes, type) {
         <button class="btn btn-whatsapp btn-sm" onclick="openShareRoute(${ri},'${type}')">📤 Compartir</button>
         <button class="btn btn-ghost btn-sm" onclick="printRoute(${ri},'${type}')">🖨️ Imprimir</button>
         <button class="btn btn-ghost btn-sm" onclick="copyRouteText(${ri},'${type}')">📋 Copiar</button>
-        ${routes.length>1?`<button class="btn btn-danger btn-sm" onclick="removeRouteVehicle(${ri},'${type}')" title="Quitar este remis y redistribuir sus pasajeros">🚫 Quitar remis</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="removeRouteVehicle(${ri},'${type}')" title="Quitar este remis de la ruta">🚫 Quitar remis</button>
       </div>
     </div>`;
   }).join('') +
-  `<div style="padding:6px 2px 10px;text-align:right">
+  `<div style="padding:6px 2px 10px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+     <button class="btn btn-outline btn-sm" onclick="openAddRouteModal('${type}')">➕ Agregar remis</button>
      <button class="btn btn-ghost btn-sm" onclick="openSavePresetModal('${type}')">💾 Guardar como plantilla</button>
    </div>`;
 }
@@ -2331,33 +2356,146 @@ function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
 // ═══════════════════════════════════════════════
 function removeRouteVehicle(routeIdx, type) {
   const date = document.getElementById('route-date').value;
-  const routes = S.routes[_sk(date)]?.[type];
+  const sk = _sk(date);
+  const routes = S.routes[sk]?.[type];
   if (!routes) return;
-  if (routes.length <= 1) { toast('No se puede quitar el único remis activo'); return; }
 
-  const removed   = routes[routeIdx];
-  const toRedist  = removed.stops.filter(s => !s.isFactory);
+  const removed = routes[routeIdx];
+  const empCount = removed.stops.filter(s => !s.isFactory).length;
   routes.splice(routeIdx, 1);
 
-  // Redistribuir al remis con menor ratio ocupación/capacidad
-  for (const stop of toRedist) {
-    let bestRi = 0, bestRatio = Infinity;
-    routes.forEach((r, i) => {
-      const n   = r.stops.filter(s => !s.isFactory).length;
-      const cap = +(r.vehicle.capacity)||8;
-      if (n/cap < bestRatio) { bestRatio = n/cap; bestRi = i; }
-    });
-    const fi = routes[bestRi].stops.findIndex(s => s.isFactory);
-    routes[bestRi].stops.splice(fi !== -1 ? fi : routes[bestRi].stops.length, 0, stop);
-    routes[bestRi].geometry = null;
+  if (routes.length === 0) {
+    // No routes left — clean up entire type entry
+    delete S.routes[sk][type];
+    if (!S.routes[sk] || (!S.routes[sk].morning && !S.routes[sk].evening)) {
+      delete S.routes[sk];
+    }
+    save();
+    renderRouteCards([], type);
+    clearMapLayers();
+  } else {
+    S.routes[sk][type] = routes;
+    save();
+    renderRouteCards(routes, type);
+    renderMapRoutes(routes, type);
+    routes.forEach((_, i) => refreshRouteGeometry(i, routes, type, date));
+  }
+  toast(`Remis quitado (${empCount} empleados sin asignar)`);
+}
+
+// ═══════════════════════════════════════════════
+//  AGREGAR REMIS ADICIONAL
+// ═══════════════════════════════════════════════
+function openAddRouteModal(type) {
+  const date = document.getElementById('route-date').value;
+  if (!date) { toast('Seleccioná una fecha'); return; }
+  if (!S.vehicles.length) { toast('Agregá al menos un vehículo'); return; }
+
+  _addRouteType = type;
+
+  // Build vehicle dropdown — only vehicles not yet in this route set
+  const existingRoutes = S.routes[_sk(date)]?.[type] || [];
+  const usedVehIds = new Set(existingRoutes.map(r => r.vehicle.id));
+  const availVehs = S.vehicles.filter(v => !usedVehIds.has(v.id));
+
+  const vehSel = document.getElementById('add-route-vehicle-select');
+  if (availVehs.length) {
+    vehSel.innerHTML = availVehs.map(v =>
+      `<option value="${v.id}">${escHtml(v.name)}${v.capacity?' ('+v.capacity+' pax)':''}</option>`
+    ).join('');
+  } else {
+    // Allow reusing any vehicle if none left
+    vehSel.innerHTML = S.vehicles.map(v =>
+      `<option value="${v.id}">${escHtml(v.name)}${v.capacity?' ('+v.capacity+' pax)':''}</option>`
+    ).join('');
   }
 
-  S.routes[_sk(date)][type] = routes;
+  // Build employee checklist — show attendance employees not already in a route
+  const presentIds = S.attendance[_sk(date)] || [];
+  const alreadyAssignedIds = new Set(
+    existingRoutes.flatMap(r => r.stops.filter(s => !s.isFactory).map(s => s.id))
+  );
+  const available = S.employees.filter(e =>
+    presentIds.includes(e.id) && e.lat && e.lng && !alreadyAssignedIds.has(e.id)
+  );
+  const empList = document.getElementById('add-route-emp-list');
+  if (available.length) {
+    empList.innerHTML = available.map(e => `
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 6px;border-radius:6px;transition:background .15s"
+             onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${e.id}" checked style="width:16px;height:16px;cursor:pointer">
+        <span style="font-size:14px">${escHtml(e.name)}</span>
+        <span style="font-size:11px;color:var(--muted)">${escHtml(e.address||'')}</span>
+      </label>`).join('');
+  } else {
+    empList.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:12px">No hay empleados disponibles (todos ya tienen remis asignado o no tienen coordenadas).</p>';
+  }
+
+  openModal('add-route-modal');
+}
+
+async function confirmAddRoute() {
+  const date = document.getElementById('route-date').value;
+  const type = _addRouteType;
+  if (!date || !type) return;
+
+  const vehId = document.getElementById('add-route-vehicle-select').value;
+  const veh = S.vehicles.find(v => v.id === vehId);
+  if (!veh) { toast('Seleccioná un vehículo'); return; }
+
+  const checked = [...document.querySelectorAll('#add-route-emp-list input[type=checkbox]:checked')];
+  const empIds = checked.map(cb => cb.value);
+  if (!empIds.length) { toast('Seleccioná al menos un empleado'); return; }
+
+  const emps = S.employees.filter(e => empIds.includes(e.id) && e.lat && e.lng);
+  if (!emps.length) { toast('Los empleados seleccionados no tienen coordenadas'); return; }
+
+  closeModal('add-route-modal');
+  setGenerating(true, 'Calculando nueva ruta…');
+
+  const factory = {...S.factory, name: S.factory.name||'Fábrica', isFactory: true};
+  const allPoints = [factory, ...emps];
+  let durationMatrix = null;
+  const osrmTable = await getDistanceMatrix(allPoints);
+  if (osrmTable) durationMatrix = osrmTable.durations;
+
+  let orderedEmps;
+  if (durationMatrix) {
+    const empIdxInAll = emps.map((_, i) => i + 1);
+    const orderedIdx = nearestNeighborMatrix(0, empIdxInAll, durationMatrix);
+    orderedEmps = orderedIdx.map(i => emps[i - 1]);
+  } else {
+    orderedEmps = nearestNeighbor(factory, emps);
+  }
+  if (type === 'morning') orderedEmps = orderedEmps.slice().reverse();
+
+  const stops = type === 'morning'
+    ? [...orderedEmps.map(e => ({...e, isFactory:false})), factory]
+    : [factory, ...orderedEmps.map(e => ({...e, isFactory:false}))];
+
+  let km, min, geometry = null;
+  const routeRes = await getRouteGeometry(stops);
+  if (routeRes) {
+    km       = routeRes.distance.toFixed(1);
+    min      = Math.round(routeRes.duration);
+    geometry = routeRes.geometry;
+  } else {
+    km  = routeDist(stops).toFixed(1);
+    min = Math.round(km / (S.speed||40) * 60);
+  }
+
+  setGenerating(false);
+  const sk = _sk(date);
+  if (!S.routes[sk]) S.routes[sk] = {};
+  if (!S.routes[sk][type]) S.routes[sk][type] = [];
+  S.routes[sk][type].push({vehicle: veh, stops, type, km, min, geometry});
+
+  const routes = S.routes[sk][type];
+  addToHistory(date, type, routes);
   save();
   renderRouteCards(routes, type);
   renderMapRoutes(routes, type);
-  toast(`Remis quitado — ${toRedist.length} empleados redistribuidos`);
-  routes.forEach((_, i) => refreshRouteGeometry(i, routes, type, date));
+  toast(`✅ Remis agregado — ${emps.length} empleado(s)`);
 }
 
 // ═══════════════════════════════════════════════

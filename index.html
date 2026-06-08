@@ -934,6 +934,53 @@ tbody tr:hover td{background:var(--blue-l)}
 </div>
 
 <!-- ══════════════ MODAL GUARDAR PLANTILLA ══════════════ -->
+<!-- ══════════════ MODAL AGREGAR PERSONA A REMIS ══════════════ -->
+<div class="overlay" id="add-emp-modal">
+  <div class="modal" style="max-width:420px">
+    <h2>➕ Agregar persona al remis</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Seleccioná empleados para agregar a este vehículo. Los que están en otro remis serán movidos.</p>
+    <div class="form-group">
+      <div id="add-emp-list" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-emp-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddEmp()">✔ Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL EDITAR PLANTILLA ══════════════ -->
+<div class="overlay" id="edit-preset-modal">
+  <div class="modal" style="max-width:520px">
+    <h2>✏️ Editar plantilla</h2>
+    <div class="form-group">
+      <label>Nombre de la plantilla</label>
+      <input class="form-control" id="edit-preset-name" placeholder="Nombre">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Tipo</label>
+        <select class="form-control" id="edit-preset-type">
+          <option value="morning">🌅 IDA (Búsqueda)</option>
+          <option value="evening">🌆 VUELTA (Retorno)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Turno</label>
+        <select class="form-control" id="edit-preset-shift"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Grupos — vehículo y empleados</label>
+      <div id="edit-preset-groups" style="display:flex;flex-direction:column;gap:10px;max-height:320px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('edit-preset-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmEditPreset()">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════ MODAL AGREGAR REMIS ══════════════ -->
 <div class="overlay" id="add-route-modal">
   <div class="modal" style="max-width:480px">
@@ -978,6 +1025,7 @@ tbody tr:hover td{background:var(--blue-l)}
     <div class="form-group">
       <label>Fecha de aplicación</label>
       <input class="form-control" id="apply-date-input" type="date">
+      <div id="apply-week-btns" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px"></div>
     </div>
     <div class="form-group">
       <label>Tipo de viaje</label>
@@ -1054,6 +1102,8 @@ let editEmpId = null, editVehId = null, editShiftId = null;
 let _presetTypeCtx = null, _presetHistSrcId = null;
 let _applySourceId = null, _applyIsPreset = false;
 let _addRouteType  = null;
+let _addEmpRouteIdx = null;
+let _editPresetId   = null;
 let map = null, cfgMap = null, mapLayers = [], cfgMarker = null;
 let empModalMap = null, empMarker = null;
 let weekOffset = 0, selectedWeekDate = null;
@@ -1524,7 +1574,7 @@ async function generateRoutes(type, employeeOverride) {
       min = Math.round(km / (S.speed||40) * 60);
     }
 
-    routes.push({vehicle:veh, stops, type, km, min, geometry});
+    routes.push({vehicle:veh, stops, type, km, min, geometry, departureTime:''});
   }
 
   setGenerating(false);
@@ -1602,6 +1652,7 @@ function renderRouteCards(routes, type) {
             <button class="sctrl-btn" ${canUp?`onclick="reorderStop(${ri},${si},-1,'${type}')"`:'disabled'} title="Subir">▲</button>
             <button class="sctrl-btn" ${canDown?`onclick="reorderStop(${ri},${si},1,'${type}')"`:'disabled'} title="Bajar">▼</button>
             ${moveBtn}
+            <button class="sctrl-btn" onclick="removeEmpFromRoute(${ri},${si},'${type}')" title="Quitar de este remis" style="color:var(--danger,#ef4444)">✕</button>
           </div>
         </div>`;
     }).join('');
@@ -1627,6 +1678,7 @@ function renderRouteCards(routes, type) {
           <span class="stat-chip stat-chip-min">⏱ ~${r.min} min</span>
           <span class="stat-chip stat-chip-pax">👥 ${empCount}${r.vehicle.capacity?'/'+r.vehicle.capacity:''}</span>
           ${isOsrm?'<span class="stat-chip stat-chip-road">🛣️ real</span>':''}
+          <label class="stat-chip" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:var(--surface-2,#f8fafc);border:1px solid var(--border);cursor:pointer" title="Horario de salida del remis">🕐<input type="time" value="${r.departureTime||''}" style="border:none;background:transparent;font-size:11px;width:72px;outline:none;cursor:pointer;color:inherit" onchange="updateDepartureTime(${ri},'${type}',this.value)"></label>
         </div>
       </div>
       <div class="stops-list">${stopsHtml}</div>
@@ -1636,6 +1688,7 @@ function renderRouteCards(routes, type) {
         <button class="btn btn-whatsapp btn-sm" onclick="openShareRoute(${ri},'${type}')">📤 Compartir</button>
         <button class="btn btn-ghost btn-sm" onclick="printRoute(${ri},'${type}')">🖨️ Imprimir</button>
         <button class="btn btn-ghost btn-sm" onclick="copyRouteText(${ri},'${type}')">📋 Copiar</button>
+        <button class="btn btn-outline btn-sm" onclick="openAddEmpModal(${ri},'${type}')" title="Agregar o mover empleados a este remis">➕ Persona</button>
         <button class="btn btn-danger btn-sm" onclick="removeRouteVehicle(${ri},'${type}')" title="Quitar este remis de la ruta">🚫 Quitar remis</button>
       </div>
     </div>`;
@@ -1733,6 +1786,7 @@ function printRoute(idx, type) {
   const routes=S.routes[_sk(date)]?.[type];
   if (!routes||!routes[idx]) return;
   const r=routes[idx], label=type==='morning'?'IDA (Búsqueda)':'VUELTA (Retorno)';
+  const sh=S.shifts.find(s=>s.id===currentShiftId);
   const stopsHtml=r.stops.map((s,si)=>
     `<tr><td style="font-size:18px;font-weight:700;text-align:center;padding:8px">${s.isFactory?'🏭':si+1}</td>
      <td style="padding:8px;font-weight:600">${escHtml(s.name)}</td>
@@ -1744,7 +1798,7 @@ function printRoute(idx, type) {
     td{border-bottom:1px solid #e2e8f0}</style></head><body>
     <h1>🚗 Hoja de Ruta — ${label}</h1>
     <h2>${escHtml(r.vehicle.name)}${r.vehicle.driver?' | '+escHtml(r.vehicle.driver):''}</h2>
-    <p style="font-size:13px;color:#555">Fecha: <b>${date}</b> · ${r.km} km · ~${r.min} min</p>
+    <p style="font-size:13px;color:#555">Fecha: <b>${date}</b>${sh?' · Turno: <b>'+escHtml(sh.name)+'</b>':''}${r.departureTime?' · Salida: <b>'+r.departureTime+' hs</b>':''} · ${r.km} km · ~${r.min} min</p>
     <table><thead><tr><th>#</th><th>Nombre</th><th>Dirección</th></tr></thead><tbody>${stopsHtml}</tbody></table>
     </body></html>`);
   w.document.close(); w.print();
@@ -1754,8 +1808,14 @@ function copyRouteText(idx, type) {
   const routes=S.routes[_sk(date)]?.[type];
   if (!routes||!routes[idx]) return;
   const r=routes[idx], label=type==='morning'?'IDA':'VUELTA';
-  const lines=[`🚗 RUTA ${label} — ${date}`,`Vehículo: ${r.vehicle.name}`,
-    r.vehicle.driver?`Conductor: ${r.vehicle.driver}`:'','',
+  const sh=S.shifts.find(s=>s.id===currentShiftId);
+  const lines=[
+    `🚗 RUTA ${label} — ${date}`,
+    sh?`Turno: ${sh.name}`:'',
+    `Vehículo: ${r.vehicle.name}`,
+    r.vehicle.driver?`Conductor: ${r.vehicle.driver}`:'',
+    r.departureTime?`Horario de salida: ${r.departureTime} hs`:'',
+    '',
     ...r.stops.map((s,si)=>`${s.isFactory?'🏭':si+1}. ${s.name}${s.address?' — '+s.address:''}`)
   ].filter(Boolean).join('\n');
   navigator.clipboard.writeText(lines).then(()=>toast('📋 Ruta copiada al portapapeles'));
@@ -1777,7 +1837,8 @@ function buildRouteMsg(route, date, type, shiftName='') {
   const lines  = [
     `🚗 *${label.toUpperCase()}*`,
     `📅 Fecha: ${date}`,
-    shiftName ? `🕐 Turno: *${shiftName}*` : null,
+    shiftName ? `🏢 Turno: *${shiftName}*` : null,
+    route.departureTime ? `🕐 Salida: *${route.departureTime} hs*` : null,
     `🚌 Vehículo: *${route.vehicle.name}*`,
     route.vehicle.driver ? `👤 Conductor: ${route.vehicle.driver}` : null,
     route.vehicle.phone  ? `📞 Tel: ${route.vehicle.phone}` : null,
@@ -1811,7 +1872,7 @@ function buildDayMsg(date, type, routeKey) {
   ];
   routes.forEach((r, ri) => {
     lines.push('');
-    lines.push(`🚗 *${r.vehicle.name}*${r.vehicle.driver?' – '+r.vehicle.driver:''}`);
+    lines.push(`🚗 *${r.vehicle.name}*${r.vehicle.driver?' – '+r.vehicle.driver:''}${r.departureTime?' · 🕐 '+r.departureTime+' hs':''}`);
     r.stops.forEach((s,si) =>
       lines.push(s.isFactory
         ? `   🏭 ${s.name}`
@@ -2384,6 +2445,194 @@ function removeRouteVehicle(routeIdx, type) {
 }
 
 // ═══════════════════════════════════════════════
+//  EDITAR PERSONAS / HORARIO EN RUTA EXISTENTE
+// ═══════════════════════════════════════════════
+function updateDepartureTime(routeIdx, type, val) {
+  const date = document.getElementById('route-date').value;
+  const routes = S.routes[_sk(date)]?.[type];
+  if (routes?.[routeIdx]) { routes[routeIdx].departureTime = val; save(); }
+}
+
+function removeEmpFromRoute(routeIdx, stopIdx, type) {
+  const date = document.getElementById('route-date').value;
+  const sk = _sk(date);
+  const routes = S.routes[sk]?.[type];
+  if (!routes?.[routeIdx]) return;
+  const route = routes[routeIdx];
+  const stop  = route.stops[stopIdx];
+  if (!stop || stop.isFactory) return;
+
+  const empCount = route.stops.filter(s => !s.isFactory).length;
+  if (empCount <= 1) {
+    if (!confirm(`${stop.name} es el último empleado. ¿Quitar también el remis ${route.vehicle.name}?`)) return;
+    routes.splice(routeIdx, 1);
+    if (!routes.length) {
+      delete S.routes[sk][type];
+      if (!S.routes[sk]?.morning && !S.routes[sk]?.evening) delete S.routes[sk];
+    }
+    save();
+    renderRouteCards(routes, type);
+    if (routes.length) renderMapRoutes(routes, type); else clearMapLayers();
+    toast('Empleado y remis quitados');
+    return;
+  }
+
+  route.stops.splice(stopIdx, 1);
+  route.geometry = null;
+  save();
+  renderRouteCards(routes, type);
+  renderMapRoutes(routes, type);
+  refreshRouteGeometry(routeIdx, routes, type, date);
+  toast(`${stop.name} quitado del remis`);
+}
+
+function openAddEmpModal(routeIdx, type) {
+  const date = document.getElementById('route-date').value;
+  if (!date) { toast('Seleccioná una fecha'); return; }
+  _addEmpRouteIdx = routeIdx;
+  _addRouteType   = type;
+  const sk     = _sk(date);
+  const routes = S.routes[sk]?.[type] || [];
+  const route  = routes[routeIdx];
+  if (!route) return;
+
+  // IDs already in THIS route
+  const thisIds = new Set(route.stops.filter(s => !s.isFactory).map(s => s.id));
+  // IDs in OTHER routes
+  const otherIds = new Set(
+    routes.flatMap((r, i) => i === routeIdx ? [] : r.stops.filter(s => !s.isFactory).map(s => s.id))
+  );
+  // Present employees from attendance
+  const presentIds = S.attendance[sk] || [];
+  const available  = S.employees.filter(e => presentIds.includes(e.id) && e.lat && e.lng && !thisIds.has(e.id));
+  const unassigned = available.filter(e => !otherIds.has(e.id));
+  const inOther    = available.filter(e => otherIds.has(e.id));
+
+  let html = '';
+  if (unassigned.length) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--muted);padding:4px 2px">Sin remis asignado:</div>`;
+    html += unassigned.map(e => `
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 6px;border-radius:6px;transition:background .15s"
+             onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${e.id}" checked style="width:15px;height:15px;cursor:pointer">
+        <span style="font-size:13px;font-weight:600">${escHtml(e.name)}</span>
+        <span style="font-size:11px;color:var(--muted)">${escHtml(e.address||'')}</span>
+      </label>`).join('');
+  }
+  if (inOther.length) {
+    html += `<div style="font-size:11px;font-weight:700;color:var(--muted);padding:8px 2px 4px">En otro remis (mover aquí):</div>`;
+    html += inOther.map(e => {
+      const curRoute = routes.find((r,i) => i!==routeIdx && r.stops.some(s=>!s.isFactory&&s.id===e.id));
+      return `
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 6px;border-radius:6px;transition:background .15s"
+             onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${e.id}" style="width:15px;height:15px;cursor:pointer">
+        <span style="font-size:13px;font-weight:600">${escHtml(e.name)}</span>
+        <span style="font-size:11px;color:var(--muted)">${curRoute?'('+escHtml(curRoute.vehicle.name)+')':''}</span>
+      </label>`;
+    }).join('');
+  }
+  if (!unassigned.length && !inOther.length) {
+    html = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:16px">No hay empleados disponibles para agregar.</p>';
+  }
+  document.getElementById('add-emp-list').innerHTML = html;
+  openModal('add-emp-modal');
+}
+
+async function confirmAddEmp() {
+  const date = document.getElementById('route-date').value;
+  const type = _addRouteType;
+  const ri   = _addEmpRouteIdx;
+  const sk   = _sk(date);
+  const routes = S.routes[sk]?.[type];
+  if (!routes?.[ri]) return;
+
+  const checked = [...document.querySelectorAll('#add-emp-list input[type=checkbox]:checked')];
+  const empIds  = checked.map(cb => cb.value);
+  if (!empIds.length) { toast('Seleccioná al menos un empleado'); return; }
+
+  const route   = routes[ri];
+  const factory = route.stops.find(s => s.isFactory);
+
+  for (const empId of empIds) {
+    const emp = S.employees.find(e => e.id === empId);
+    if (!emp) continue;
+    // Remove from any other route in the same type
+    routes.forEach((r, i) => {
+      if (i === ri) return;
+      const idx = r.stops.findIndex(s => !s.isFactory && s.id === empId);
+      if (idx !== -1) { r.stops.splice(idx, 1); r.geometry = null; }
+    });
+    // Insert before factory stop (morning) or after factory (evening)
+    const fIdx = route.stops.findIndex(s => s.isFactory);
+    if (fIdx !== -1) route.stops.splice(fIdx, 0, {...emp, isFactory:false});
+    else             route.stops.push({...emp, isFactory:false});
+  }
+
+  route.geometry = null;
+  closeModal('add-emp-modal');
+  save();
+  renderRouteCards(routes, type);
+  renderMapRoutes(routes, type);
+  routes.forEach((_, i) => refreshRouteGeometry(i, routes, type, date));
+  toast(`${empIds.length} empleado(s) agregado(s) al remis`);
+}
+
+// ═══════════════════════════════════════════════
+//  EDITAR PLANTILLA GUARDADA
+// ═══════════════════════════════════════════════
+function openEditPresetModal(id) {
+  _editPresetId = id;
+  const p = S.routePresets.find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('edit-preset-name').value = p.name;
+  document.getElementById('edit-preset-type').value = p.type;
+
+  const shiftSel = document.getElementById('edit-preset-shift');
+  shiftSel.innerHTML = S.shifts.map(s =>
+    `<option value="${s.id}"${s.id===p.shiftId?' selected':''}>${escHtml(s.name)}</option>`
+  ).join('');
+
+  const groupsEl = document.getElementById('edit-preset-groups');
+  groupsEl.innerHTML = p.groups.map((g, gi) => {
+    const veh     = S.vehicles.find(v => v.id === g.vehicleId);
+    const vehName = veh ? veh.name : g.vehicleName;
+    const boxes   = S.employees.filter(e => e.active !== false).map(e =>
+      `<label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:2px">
+         <input type="checkbox" class="ep-cb" data-group="${gi}" value="${e.id}"${g.empIds.includes(e.id)?' checked':''}>
+         ${escHtml(e.name)}
+       </label>`).join('');
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">🚗 ${escHtml(vehName)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${boxes}</div>
+    </div>`;
+  }).join('');
+
+  openModal('edit-preset-modal');
+}
+
+function confirmEditPreset() {
+  const p = S.routePresets.find(x => x.id === _editPresetId);
+  if (!p) return;
+  const name = document.getElementById('edit-preset-name').value.trim();
+  if (!name) { toast('El nombre no puede estar vacío'); return; }
+  p.name    = name;
+  p.type    = document.getElementById('edit-preset-type').value;
+  p.shiftId = document.getElementById('edit-preset-shift').value;
+  p.groups.forEach((g, gi) => {
+    const checked = [...document.querySelectorAll(`.ep-cb[data-group="${gi}"]:checked`)];
+    g.empIds   = checked.map(cb => cb.value);
+    g.empNames = g.empIds.map(id => S.employees.find(e=>e.id===id)?.name || id);
+  });
+  p.groups = p.groups.filter(g => g.empIds.length > 0);
+  closeModal('edit-preset-modal');
+  save();
+  renderPresetsSection();
+  toast('Plantilla actualizada');
+}
+
+// ═══════════════════════════════════════════════
 //  AGREGAR REMIS ADICIONAL
 // ═══════════════════════════════════════════════
 function openAddRouteModal(type) {
@@ -2488,7 +2737,7 @@ async function confirmAddRoute() {
   const sk = _sk(date);
   if (!S.routes[sk]) S.routes[sk] = {};
   if (!S.routes[sk][type]) S.routes[sk][type] = [];
-  S.routes[sk][type].push({vehicle: veh, stops, type, km, min, geometry});
+  S.routes[sk][type].push({vehicle: veh, stops, type, km, min, geometry, departureTime:''});
 
   const routes = S.routes[sk][type];
   addToHistory(date, type, routes);
@@ -2586,6 +2835,21 @@ function openApplyModal(id, isPreset) {
     isPreset ? `Aplicar plantilla: ${src.name}` : `Reutilizar config – ${src.date} · ${typeLabel}${sh?' · '+sh.name:''}`;
   document.getElementById('apply-date-input').value = new Date().toISOString().split('T')[0];
   document.getElementById('apply-type-select').value = src.type;
+  // Populate this-week day quick-select buttons
+  const today = new Date();
+  const dow = today.getDay(); // 0=Sun
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dow + 6) % 7));
+  const shortDays = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const todayIso = today.toISOString().split('T')[0];
+  document.getElementById('apply-week-btns').innerHTML = Array.from({length:7},(_,i)=>{
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    const iso = d.toISOString().split('T')[0];
+    const lbl = shortDays[d.getDay()] + ' ' + d.getDate();
+    const isToday = iso===todayIso;
+    return `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 9px${isToday?';border-color:var(--primary);color:var(--primary)':''}"
+      onclick="document.getElementById('apply-date-input').value='${iso}'">${lbl}</button>`;
+  }).join('');
   openModal('apply-preset-modal');
 }
 
@@ -2614,7 +2878,7 @@ async function confirmApplyPreset() {
     const res = await getRouteGeometry(stops);
     const km  = res ? res.distance.toFixed(1) : routeDist(stops).toFixed(1);
     const min = res ? Math.round(res.duration) : Math.round((+km)/(S.speed||40)*60);
-    routes.push({vehicle:veh, stops, type, km, min, geometry:res?.geometry||null});
+    routes.push({vehicle:veh, stops, type, km, min, geometry:res?.geometry||null, departureTime:''});
   }
   setGenerating(false);
   if (!routes.length) { toast('No se pudo aplicar: verificá que los vehículos y empleados sigan activos'); return; }
@@ -2656,8 +2920,9 @@ function renderPresetsSection() {
         <div class="hist-item-meta">${lbl}${sh?` · <span style="color:${sh.color};font-weight:700">${escHtml(sh.name)}</span>`:''} · ${p.groups.length} remis · ${total} empleados · ${p.createdAt}</div>
         <div class="hist-item-detail">${p.groups.map(g=>`${escHtml(g.vehicleName)}: ${g.empNames.slice(0,3).map(n=>n.split(' ')[0]).join(', ')}${g.empNames.length>3?'…':''}`).join(' | ')}</div>
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;align-items:flex-start">
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:flex-start;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" onclick="openApplyModal('${p.id}',true)">▶ Aplicar</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditPresetModal('${p.id}')" title="Editar plantilla">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deletePreset('${p.id}')">✕</button>
       </div>
     </div>`;

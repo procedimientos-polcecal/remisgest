@@ -1794,11 +1794,17 @@ function printRoute(idx, type) {
   const w=window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hoja de Ruta</title>
     <style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}h2{font-size:16px;color:#555}
+    .meta{font-size:13px;color:#555;line-height:1.8;margin:6px 0 12px}
     table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#f1f5f9;padding:8px;text-align:left;font-size:13px}
     td{border-bottom:1px solid #e2e8f0}</style></head><body>
     <h1>🚗 Hoja de Ruta — ${label}</h1>
     <h2>${escHtml(r.vehicle.name)}${r.vehicle.driver?' | '+escHtml(r.vehicle.driver):''}</h2>
-    <p style="font-size:13px;color:#555">Fecha: <b>${date}</b>${sh?' · Turno: <b>'+escHtml(sh.name)+'</b>':''}${r.departureTime?' · Salida: <b>'+r.departureTime+' hs</b>':''} · ${r.km} km · ~${r.min} min</p>
+    <div class="meta">
+      📅 Fecha: <b>${_fmtDate(date)}</b><br>
+      ${sh?`🏢 Turno: <b>${escHtml(sh.name)}</b> &nbsp;•&nbsp; 🕐 <b>${sh.start} – ${sh.end}</b><br>`:''}
+      ${r.departureTime?`🚐 Salida del remis: <b>${r.departureTime} hs</b><br>`:''}
+      📏 ${r.km} km &nbsp;·&nbsp; ~${r.min} min
+    </div>
     <table><thead><tr><th>#</th><th>Nombre</th><th>Dirección</th></tr></thead><tbody>${stopsHtml}</tbody></table>
     </body></html>`);
   w.document.close(); w.print();
@@ -1807,16 +1813,23 @@ function copyRouteText(idx, type) {
   const date=document.getElementById('route-date').value;
   const routes=S.routes[_sk(date)]?.[type];
   if (!routes||!routes[idx]) return;
-  const r=routes[idx], label=type==='morning'?'IDA':'VUELTA';
+  const r=routes[idx], label=type==='morning'?'IDA (Búsqueda)':'VUELTA (Retorno)';
   const sh=S.shifts.find(s=>s.id===currentShiftId);
   const lines=[
-    `🚗 RUTA ${label} — ${date}`,
-    sh?`Turno: ${sh.name}`:'',
-    `Vehículo: ${r.vehicle.name}`,
-    r.vehicle.driver?`Conductor: ${r.vehicle.driver}`:'',
-    r.departureTime?`Horario de salida: ${r.departureTime} hs`:'',
+    `🚗 RUTA ${label} — ${_fmtDate(date)}`,
+    sh ? `🏢 Turno: ${sh.name}  •  🕐 ${sh.start} – ${sh.end}` : '',
+    r.departureTime ? `🚐 Salida del remis: ${r.departureTime} hs` : '',
+    `🚌 Vehículo: ${r.vehicle.name}`,
+    r.vehicle.driver ? `👤 Conductor: ${r.vehicle.driver}` : '',
+    r.vehicle.phone  ? `📞 Tel: ${r.vehicle.phone}` : '',
     '',
-    ...r.stops.map((s,si)=>`${s.isFactory?'🏭':si+1}. ${s.name}${s.address?' — '+s.address:''}`)
+    ...r.stops.map((s,si) =>
+      s.isFactory
+        ? `🏭 ${s.name}${s.address?' — '+s.address:''}`
+        : `${si+1}. ${s.name}${s.address?' — '+s.address:''}`
+    ),
+    '',
+    `📏 ${r.km} km · ~${r.min} min`
   ].filter(Boolean).join('\n');
   navigator.clipboard.writeText(lines).then(()=>toast('📋 Ruta copiada al portapapeles'));
 }
@@ -1826,19 +1839,28 @@ function copyRouteText(idx, type) {
 // ═══════════════════════════════════════════════
 let _shareMsg = '';
 
+function _fmtDate(iso) {
+  if (!iso) return iso;
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function _shiftLabel(sh) {
+  if (!sh) return '';
+  return `${sh.name}  •  🕐 ${sh.start} – ${sh.end}`;
+}
+
 function _gmLink(route) {
   const first = route.stops[0], last = route.stops[route.stops.length-1];
   const mid = route.stops.slice(1,-1).slice(0,9).map(s=>`${s.lat},${s.lng}`).join('|');
   return `https://www.google.com/maps/dir/?api=1&origin=${first.lat},${first.lng}&destination=${last.lat},${last.lng}${mid?'&waypoints='+encodeURIComponent(mid):''}&travelmode=driving`;
 }
 
-function buildRouteMsg(route, date, type, shiftName='') {
+function buildRouteMsg(route, date, type, shiftName='', shiftHours='') {
   const label  = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
   const lines  = [
-    `🚗 *${label.toUpperCase()}*`,
-    `📅 Fecha: ${date}`,
-    shiftName ? `🏢 Turno: *${shiftName}*` : null,
-    route.departureTime ? `🕐 Salida: *${route.departureTime} hs*` : null,
+    `🚗 *${label.toUpperCase()} — ${_fmtDate(date)}*`,
+    shiftName ? `🏢 Turno: *${shiftName}*${shiftHours?'  •  🕐 '+shiftHours:''}` : null,
+    route.departureTime ? `🚐 Salida del remis: *${route.departureTime} hs*` : null,
     `🚌 Vehículo: *${route.vehicle.name}*`,
     route.vehicle.driver ? `👤 Conductor: ${route.vehicle.driver}` : null,
     route.vehicle.phone  ? `📞 Tel: ${route.vehicle.phone}` : null,
@@ -1858,21 +1880,22 @@ function buildRouteMsg(route, date, type, shiftName='') {
 }
 
 function buildDayMsg(date, type, routeKey) {
-  const key    = routeKey || _sk(date);
-  const routes = S.routes[key]?.[type];
+  const key     = routeKey || _sk(date);
+  const routes  = S.routes[key]?.[type];
   if (!routes||!routes.length) return null;
-  const label     = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
-  const factory   = S.factory.name || 'Fábrica';
-  const shiftName = S.shifts.find(s=>s.id===key.split('__')[1])?.name || '';
+  const label   = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
+  const factory = S.factory.name || 'Fábrica';
+  const sh      = S.shifts.find(s=>s.id===key.split('__')[1]);
   const lines   = [
-    `📤 *RUTAS ${label.toUpperCase()}*`,
-    `📅 ${date}  ·  🏭 ${factory}`,
-    shiftName ? `🕐 Turno: *${shiftName}*` : null,
+    `📤 *RUTAS ${label.toUpperCase()} — ${_fmtDate(date)}*`,
+    `🏭 ${factory}`,
+    sh ? `🏢 Turno: *${sh.name}*  •  🕐 ${sh.start} – ${sh.end}` : null,
     '━━━━━━━━━━━━━━━━━━',
   ];
-  routes.forEach((r, ri) => {
+  routes.forEach((r) => {
     lines.push('');
-    lines.push(`🚗 *${r.vehicle.name}*${r.vehicle.driver?' – '+r.vehicle.driver:''}${r.departureTime?' · 🕐 '+r.departureTime+' hs':''}`);
+    lines.push(`🚗 *${r.vehicle.name}*${r.vehicle.driver?' – '+r.vehicle.driver:''}`);
+    if (r.departureTime) lines.push(`   🚐 Salida: *${r.departureTime} hs*`);
     r.stops.forEach((s,si) =>
       lines.push(s.isFactory
         ? `   🏭 ${s.name}`
@@ -1881,7 +1904,7 @@ function buildDayMsg(date, type, routeKey) {
     lines.push(`   📏 ${r.km} km · ~${r.min} min`);
     lines.push(`   🗺️ ${_gmLink(r)}`);
   });
-  return lines.join('\n');
+  return lines.filter(l=>l!==null).join('\n');
 }
 
 function _openShareModal(msg, title, subtitle, phone='') {
@@ -1900,13 +1923,15 @@ function openShareRoute(routeIdx, type) {
   if (!routes||!routes[routeIdx]) { toast('No hay ruta guardada'); return; }
   const r          = routes[routeIdx];
   const color      = COLORS[routeIdx % COLORS.length];
-  const shiftName  = S.shifts.find(s=>s.id===currentShiftId)?.name || '';
+  const sh         = S.shifts.find(s=>s.id===currentShiftId);
+  const shiftName  = sh?.name || '';
+  const shiftHours = sh ? `${sh.start} – ${sh.end}` : '';
   document.getElementById('share-icon').innerHTML =
     `<div style="width:34px;height:34px;background:${color};border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px">🚗</div>`;
   _openShareModal(
-    buildRouteMsg(r, date, type, shiftName),
+    buildRouteMsg(r, date, type, shiftName, shiftHours),
     `${r.vehicle.name}`,
-    `${type==='morning'?'🌅 Ida':'🌆 Vuelta'}${shiftName?' · '+shiftName:''} · ${date} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
+    `${type==='morning'?'🌅 Ida':'🌆 Vuelta'}${shiftName?' · '+shiftName+' ('+shiftHours+')':''} · ${_fmtDate(date)} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
     r.vehicle.phone||''
   );
 }

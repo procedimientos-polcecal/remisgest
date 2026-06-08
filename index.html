@@ -1855,12 +1855,16 @@ function _gmLink(route) {
   return `https://www.google.com/maps/dir/?api=1&origin=${first.lat},${first.lng}&destination=${last.lat},${last.lng}${mid?'&waypoints='+encodeURIComponent(mid):''}&travelmode=driving`;
 }
 
-function buildRouteMsg(route, date, type, shiftName='', shiftHours='') {
-  const label  = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
-  const lines  = [
-    `🚗 *${label.toUpperCase()} — ${_fmtDate(date)}*`,
-    shiftName ? `🏢 Turno: *${shiftName}*${shiftHours?'  •  🕐 '+shiftHours:''}` : null,
-    route.departureTime ? `🚐 Salida del remis: *${route.departureTime} hs*` : null,
+function buildRouteMsg(route, date, type, sh=null) {
+  const dep   = route.departureTime || '';
+  const lType = type === 'morning' ? 'IDA' : 'VUELTA';
+  const lDir  = type === 'morning' ? 'Búsqueda' : 'Retorno';
+  const headerLabel = dep
+    ? `${lType} (${lDir} · ${dep} hs)`
+    : `${lType} (${lDir})`;
+  const lines = [
+    `🚗 *${headerLabel} — ${_fmtDate(date)}*`,
+    sh ? `🏢 Turno: *${sh.name}*  •  🕐 Entrada ${sh.start} hs` : null,
     `🚌 Vehículo: *${route.vehicle.name}*`,
     route.vehicle.driver ? `👤 Conductor: ${route.vehicle.driver}` : null,
     route.vehicle.phone  ? `📞 Tel: ${route.vehicle.phone}` : null,
@@ -1872,9 +1876,7 @@ function buildRouteMsg(route, date, type, shiftName='', shiftHours='') {
         : `${si+1}. *${s.name}*${s.address?'\n   📍 '+s.address:''}`
     ),
     '',
-    `📏 ${route.km} km · ~${route.min} min`,
-    '',
-    `🗺️ Google Maps:\n${_gmLink(route)}`
+    `📏 ${route.km} km · ~${route.min} min`
   ];
   return lines.filter(l=>l!==null).join('\n');
 }
@@ -1889,13 +1891,13 @@ function buildDayMsg(date, type, routeKey) {
   const lines   = [
     `📤 *RUTAS ${label.toUpperCase()} — ${_fmtDate(date)}*`,
     `🏭 ${factory}`,
-    sh ? `🏢 Turno: *${sh.name}*  •  🕐 ${sh.start} – ${sh.end}` : null,
+    sh ? `🏢 Turno: *${sh.name}*  •  🕐 Entrada ${sh.start} hs` : null,
     '━━━━━━━━━━━━━━━━━━',
   ];
   routes.forEach((r) => {
     lines.push('');
-    lines.push(`🚗 *${r.vehicle.name}*${r.vehicle.driver?' – '+r.vehicle.driver:''}`);
-    if (r.departureTime) lines.push(`   🚐 Salida: *${r.departureTime} hs*`);
+    const rDep = r.departureTime ? ` · Búsqueda ${r.departureTime} hs` : '';
+    lines.push(`🚗 *${r.vehicle.name}*${r.vehicle.driver?' – '+r.vehicle.driver:''}${rDep}`);
     r.stops.forEach((s,si) =>
       lines.push(s.isFactory
         ? `   🏭 ${s.name}`
@@ -1923,15 +1925,14 @@ function openShareRoute(routeIdx, type) {
   if (!routes||!routes[routeIdx]) { toast('No hay ruta guardada'); return; }
   const r          = routes[routeIdx];
   const color      = COLORS[routeIdx % COLORS.length];
-  const sh         = S.shifts.find(s=>s.id===currentShiftId);
-  const shiftName  = sh?.name || '';
-  const shiftHours = sh ? `${sh.start} – ${sh.end}` : '';
+  const sh = S.shifts.find(s=>s.id===currentShiftId);
   document.getElementById('share-icon').innerHTML =
     `<div style="width:34px;height:34px;background:${color};border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px">🚗</div>`;
+  const dep = r.departureTime ? ` · ${r.departureTime} hs` : '';
   _openShareModal(
-    buildRouteMsg(r, date, type, shiftName, shiftHours),
+    buildRouteMsg(r, date, type, sh),
     `${r.vehicle.name}`,
-    `${type==='morning'?'🌅 Ida':'🌆 Vuelta'}${shiftName?' · '+shiftName+' ('+shiftHours+')':''} · ${_fmtDate(date)} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
+    `${type==='morning'?'🌅 Ida':'🌆 Vuelta'}${sh?' · '+sh.name+' ('+sh.start+' hs)':''}${dep} · ${_fmtDate(date)} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
     r.vehicle.phone||''
   );
 }

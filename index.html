@@ -3038,10 +3038,7 @@ let _exportScope = 'day';
 let _exportFmt   = 'csv';
 
 const EXPORT_HEADERS = [
-  'Fecha','Día','Turno','Entrada turno','Salida turno',
-  'Tipo','Remis','Conductor','Teléfono',
-  'Salida remis','#','Empleado','Dirección',
-  'Km total','Min total'
+  'Fecha','Turno','Entrada','Tipo','Remis','Conductor','#','Empleado','Dirección','Km','Min'
 ];
 
 function openExportModal() {
@@ -3096,21 +3093,17 @@ function _buildDayRows(date) {
         const empStops = r.stops.filter(s => !s.isFactory);
         empStops.forEach((s, si) => {
           rows.push([
-            _fmtDate(date),
-            _dayOfWeek(date),
-            sh.name,
-            sh.start,
-            sh.end,
-            typeLabel,
-            r.vehicle.name,
-            r.vehicle.driver || '',
-            r.vehicle.phone  || '',
-            r.departureTime  || '',
-            si + 1,
-            s.name,
-            s.address || '',
-            r.km,
-            r.min
+            _fmtDate(date),      // 0 Fecha
+            sh.name,             // 1 Turno
+            sh.start,            // 2 Entrada
+            typeLabel,           // 3 Tipo
+            r.vehicle.name,      // 4 Remis
+            r.vehicle.driver || '', // 5 Conductor
+            si + 1,              // 6 #
+            s.name,              // 7 Empleado
+            s.address || '',     // 8 Dirección
+            r.km,                // 9 Km
+            r.min                // 10 Min
           ]);
         });
       });
@@ -3144,21 +3137,17 @@ function _buildHistRows() {
       g.empIds.forEach((empId, si) => {
         const emp = S.employees.find(e => e.id === empId);
         rows.push([
-          _fmtDate(h.date),
-          _dayOfWeek(h.date),
-          sh?.name || '',
-          sh?.start || '',
-          sh?.end   || '',
-          typeLabel,
-          g.vehicleName,
-          veh?.driver || '',
-          veh?.phone  || '',
-          '',
-          si + 1,
-          g.empNames[si] || empId,
-          emp?.address || '',
-          '',
-          ''
+          _fmtDate(h.date),         // 0 Fecha
+          sh?.name || '',            // 1 Turno
+          sh?.start || '',           // 2 Entrada
+          typeLabel,                 // 3 Tipo
+          g.vehicleName,             // 4 Remis
+          veh?.driver || '',         // 5 Conductor
+          si + 1,                    // 6 #
+          g.empNames[si] || empId,   // 7 Empleado
+          emp?.address || '',        // 8 Dirección
+          '',                        // 9 Km
+          ''                         // 10 Min
         ]);
       });
     });
@@ -3195,109 +3184,52 @@ function confirmExport() {
   else                            _downloadHTMLTable(filename, rows, title);
 }
 
-// ─── Colores por vehículo (hex sin #) ───
-const XLSX_VEH_COLORS = ['1D4ED8','B91C1C','047857','B45309','6D28D9','BE185D','0E7490','3F6212'];
-const XLSX_VEH_LIGHT  = ['DBEAFE','FEE2E2','DCFCE7','FEF3C7','EDE9FE','FCE7F3','CFFAFE','ECFCCB'];
+function _buildXLSXSheet(rows) {
+  const mk = (v, s) => ({ v: v ?? '', t: typeof v === 'number' ? 'n' : 's', s });
+  const wsData = [];
 
-function _xs(type, colorHex, lightHex) {
-  const hair = c => ({ style: 'hair', color: { rgb: c || 'E2E8F0' } });
-  const b = { top: hair(), bottom: hair(), left: hair(), right: hair() };
-  if (type === 'colhdr') return {
+  // Header row
+  const hStyle = {
     fill: { fgColor: { rgb: '1E293B' } },
     font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10, name: 'Arial' },
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
-    border: { top: { style:'medium',color:{rgb:'000000'} }, bottom: { style:'medium',color:{rgb:'000000'} },
-              left: hair('94A3B8'), right: hair('94A3B8') }
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: { bottom: { style: 'medium', color: { rgb: '000000' } },
+              right:  { style: 'hair',   color: { rgb: '475569' } } }
   };
-  if (type === 'section') return {
-    fill: { fgColor: { rgb: '334155' } },
-    font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11, name: 'Arial' },
-    alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
-    border: { top:{style:'medium',color:{rgb:'1E293B'}}, bottom:{style:'medium',color:{rgb:'1E293B'}} }
-  };
-  if (type === 'vehicle') return {
-    fill: { fgColor: { rgb: colorHex } },
-    font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10, name: 'Arial' },
-    alignment: { horizontal: 'left', vertical: 'center', indent: 2 },
-    border: { top:{style:'thin',color:{rgb:colorHex}}, bottom:{style:'thin',color:{rgb:colorHex}},
-              left:{style:'thin',color:{rgb:colorHex}}, right:{style:'thin',color:{rgb:colorHex}} }
-  };
-  // emp rows: subtle background from vehicle light color, alternating
-  return {
-    fill: { fgColor: { rgb: lightHex || 'FFFFFF' } },
-    font: { sz: 10, color: { rgb: '1E293B' }, name: 'Arial' },
-    alignment: { horizontal: 'left', vertical: 'center', wrapText: false },
-    border: b
-  };
-}
+  wsData.push(EXPORT_HEADERS.map(h => mk(h, hStyle)));
 
-function _buildXLSXSheet(rows) {
-  const N = EXPORT_HEADERS.length;
-  const wsData = [];
-  const merges = [];
-
-  const mk = (v, s) => ({ v: v ?? '', t: typeof v === 'number' ? 'n' : 's', s });
-  const addMerge = (text, style) => {
-    const r = wsData.length;
-    const row = EXPORT_HEADERS.map((_, c) => c === 0 ? mk(text, style) : mk('', style));
-    wsData.push(row); merges.push({ s:{r,c:0}, e:{r,c:N-1} });
-  };
-
-  // Column header row
-  wsData.push(EXPORT_HEADERS.map(h => mk(h, _xs('colhdr'))));
-
-  // Pre-compute per-vehicle stats for the vehicle header row
-  const vStats = {};
+  // Assign one pastel color per unique vehicle group (fecha+turno+tipo+remis)
+  const palette = ['DBEAFE','FEE2E2','DCFCE7','FEF3C7','EDE9FE','FCE7F3','CFFAFE','ECFCCB'];
+  const vMap = {};
+  let vIdx = 0;
   rows.forEach(row => {
-    const vk = `${row[0]}||${row[2]}||${row[5]}||${row[6]}`;
-    if (!vStats[vk]) vStats[vk] = { n: 0, km: row[13], min: row[14] };
-    vStats[vk].n++;
+    const vk = `${row[0]}|${row[1]}|${row[3]}|${row[4]}`;
+    if (!(vk in vMap)) vMap[vk] = palette[vIdx++ % palette.length];
   });
 
-  let curSection = null, curVehicle = null;
-  let vColorIdx = -1, empSeq = 0;
-
+  // Data rows: flat table, one color per remis group
+  const hairBorder = {
+    top:    { style: 'hair', color: { rgb: 'E2E8F0' } },
+    bottom: { style: 'hair', color: { rgb: 'E2E8F0' } },
+    left:   { style: 'hair', color: { rgb: 'E2E8F0' } },
+    right:  { style: 'hair', color: { rgb: 'E2E8F0' } }
+  };
   rows.forEach(row => {
-    const sk = `${row[0]}||${row[2]}||${row[5]}`;                // date+turno+tipo
-    const vk = `${sk}||${row[6]}`;                               // +remis
-
-    // Section separator
-    if (sk !== curSection) {
-      curSection = sk; curVehicle = null; vColorIdx = -1;
-      const dir = row[5] === 'IDA' ? ' IDA (Búsqueda)' : ' VUELTA (Retorno)';
-      addMerge(`  ${row[1]}  ${row[0]}     •     ${dir}     •     Turno: ${row[2]}  •  Entrada: ${row[3]} hs`, _xs('section'));
-    }
-
-    // Vehicle header
-    if (vk !== curVehicle) {
-      curVehicle = vk; vColorIdx = (vColorIdx + 1) % XLSX_VEH_COLORS.length; empSeq = 0;
-      const st = vStats[vk];
-      const parts = [`  ${row[6]}`];
-      if (row[7]) parts.push(` ${row[7]}`);
-      if (row[9]) parts.push(` Salida: ${row[9]} hs`);
-      parts.push(` ${st.n} pasajero${st.n!==1?'s':''}`);
-      if (st.km) parts.push(` ${st.km} km  ·  ~${st.min} min`);
-      addMerge('     ' + parts.join('     '), _xs('vehicle', XLSX_VEH_COLORS[vColorIdx]));
-    }
-
-    // Employee data row (alternating with lighter shade of vehicle color)
-    const light = empSeq % 2 === 0 ? XLSX_VEH_LIGHT[vColorIdx] : 'FFFFFF';
-    const empStyle = _xs('emp', XLSX_VEH_COLORS[vColorIdx], light);
-    wsData.push(row.map((v, ci) => mk(ci >= 13 ? (v === '' ? '' : +v || v) : v, empStyle)));
-    empSeq++;
+    const vk = `${row[0]}|${row[1]}|${row[3]}|${row[4]}`;
+    const dStyle = {
+      fill: { fgColor: { rgb: vMap[vk] } },
+      font: { sz: 10, color: { rgb: '1E293B' }, name: 'Arial' },
+      alignment: { horizontal: 'left', vertical: 'center' },
+      border: hairBorder
+    };
+    wsData.push(row.map((v, ci) => mk(ci >= 9 ? (v === '' ? '' : +v || v) : v, dStyle)));
   });
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!merges'] = merges;
-  ws['!cols']   = [
-    {wch:12},{wch:5},{wch:10},{wch:8},{wch:9},
-    {wch:8},{wch:18},{wch:18},{wch:13},{wch:9},
-    {wch:4},{wch:26},{wch:32},{wch:7},{wch:7}
+  ws['!cols'] = [
+    {wch:12},{wch:12},{wch:7},{wch:8},{wch:18},{wch:18},{wch:4},{wch:26},{wch:32},{wch:6},{wch:6}
   ];
-  ws['!rows'] = wsData.map((_, i) => {
-    if (i === 0) return { hpt: 18 };
-    return { hpt: merges.some(m => m.s.r === i) ? 18 : 15 };
-  });
+  ws['!rows'] = wsData.map((_, i) => ({ hpt: i === 0 ? 18 : 15 }));
   ws['!views'] = [{ state:'frozen', ySplit:1, topLeftCell:'A2' }];
   return ws;
 }
@@ -3308,13 +3240,18 @@ function _downloadXLSXStyled(filename, rows, isWeekly) {
 
   if (isWeekly) {
     // Un sheet por día (solo los días con datos)
+    // r[0] es "dd/mm/yyyy" — revertir a ISO para ordenar y nombrar correctamente
     const byDate = {};
-    rows.forEach(r => { if (!byDate[r[0]]) byDate[r[0]] = []; byDate[r[0]].push(r); });
+    rows.forEach(r => {
+      const iso = r[0].split('/').reverse().join('-');
+      if (!byDate[iso]) byDate[iso] = [];
+      byDate[iso].push(r);
+    });
     let cnt = 0;
-    Object.entries(byDate).sort(([a],[b])=>a.localeCompare(b)).forEach(([date, dr]) => {
+    Object.entries(byDate).sort(([a],[b])=>a.localeCompare(b)).forEach(([isoDate, dr]) => {
       const ws = _buildXLSXSheet(dr);
-      const [,m,d] = date.split('-');
-      const lbl = `${dr[0][1]} ${d}/${m}`;   // "Lun 09/06"
+      const [,m,d] = isoDate.split('-');
+      const lbl = `${_dayOfWeek(isoDate)} ${d}/${m}`;   // "Lun 09/06"
       XLSX.utils.book_append_sheet(wb, ws, lbl);
       cnt++;
     });

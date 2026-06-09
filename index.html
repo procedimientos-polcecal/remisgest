@@ -3038,7 +3038,7 @@ let _exportScope = 'day';
 let _exportFmt   = 'csv';
 
 const EXPORT_HEADERS = [
-  'Fecha','Turno','Entrada','Tipo','Remis','Conductor','#','Empleado','Dirección','Km','Min'
+  'Fecha','Turno','Busqueda','Tipo','Remis','Conductor','#','Empleado','Dirección','Km','Min'
 ];
 
 function openExportModal() {
@@ -3095,7 +3095,7 @@ function _buildDayRows(date) {
           rows.push([
             _fmtDate(date),      // 0 Fecha
             sh.name,             // 1 Turno
-            sh.start,            // 2 Entrada
+            r.departureTime || '', // 2 Busqueda
             typeLabel,           // 3 Tipo
             r.vehicle.name,      // 4 Remis
             r.vehicle.driver || '', // 5 Conductor

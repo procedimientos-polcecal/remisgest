@@ -629,6 +629,7 @@ tbody tr:hover td{background:var(--blue-l)}
     <div style="display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0">
       <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('morning')">📤 Ida</button>
       <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('evening')">📤 Vuelta</button>
+      <button class="btn btn-ghost btn-sm" onclick="openExportModal()" title="Exportar a planilla">📊</button>
       <button class="btn btn-ghost btn-sm" onclick="clearRoutes()" title="Limpiar rutas">🗑</button>
     </div>
   </div>
@@ -776,11 +777,15 @@ tbody tr:hover td{background:var(--blue-l)}
   <div style="max-width:700px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
       <h2 style="font-size:15px;font-weight:700;color:var(--text)">💾 Plantillas guardadas</h2>
+      <button class="btn btn-ghost btn-sm" onclick="openExportModal()" title="Exportar a planilla">📊 Exportar</button>
     </div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Configuraciones de remises guardadas para reutilizar la semana siguiente.</p>
     <div id="presets-list"></div>
     <br>
-    <h2 style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">📋 Historial de rutas</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <h2 style="font-size:15px;font-weight:700;color:var(--text)">📋 Historial de rutas</h2>
+      <button class="btn btn-ghost btn-sm" onclick="setExportScope('hist');openExportModal()" title="Exportar historial">📊 Exportar</button>
+    </div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Se registra automáticamente cada vez que generás rutas. Últimas 60 configuraciones.</p>
     <div id="history-list"></div>
   </div>
@@ -1037,6 +1042,37 @@ tbody tr:hover td{background:var(--blue-l)}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('apply-preset-modal')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmApplyPreset()">▶ Aplicar y calcular rutas</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL EXPORTAR PLANILLA ══════════════ -->
+<div class="overlay" id="export-modal">
+  <div class="modal" style="max-width:440px">
+    <h2>📊 Exportar configuración</h2>
+    <div class="form-group">
+      <label>¿Qué exportar?</label>
+      <div style="display:flex;gap:8px">
+        <button id="exp-btn-day"  class="btn btn-primary btn-sm"  onclick="setExportScope('day')">📅 Día</button>
+        <button id="exp-btn-week" class="btn btn-outline btn-sm" onclick="setExportScope('week')">📆 Semana</button>
+        <button id="exp-btn-hist" class="btn btn-outline btn-sm" onclick="setExportScope('hist')">🗂 Historial</button>
+      </div>
+    </div>
+    <div class="form-group" id="exp-date-row">
+      <label>Fecha</label>
+      <input class="form-control" id="exp-date-input" type="date">
+    </div>
+    <div class="form-group">
+      <label>Formato</label>
+      <div style="display:flex;gap:8px">
+        <button id="exp-fmt-csv"  class="btn btn-primary btn-sm"  onclick="setExportFmt('csv')">📋 CSV (Excel)</button>
+        <button id="exp-fmt-html" class="btn btn-outline btn-sm" onclick="setExportFmt('html')">🌐 Tabla HTML</button>
+      </div>
+    </div>
+    <p id="exp-preview-txt" style="font-size:12px;color:var(--muted);margin:0 0 4px"></p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('export-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmExport()">⬇ Descargar</button>
     </div>
   </div>
 </div>
@@ -2986,6 +3022,219 @@ function renderHistorySection() {
     }).join('');
     return `<div class="hist-date-group"><div class="hist-date-label">📅 ${dateStr}</div>${rows}</div>`;
   }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  EXPORTAR PLANILLA (CSV / HTML)
+// ═══════════════════════════════════════════════
+let _exportScope = 'day';
+let _exportFmt   = 'csv';
+
+const EXPORT_HEADERS = [
+  'Fecha','Día','Turno','Entrada turno','Salida turno',
+  'Tipo','Remis','Conductor','Teléfono',
+  'Salida remis','#','Empleado','Dirección',
+  'Km total','Min total'
+];
+
+function openExportModal() {
+  const date = document.getElementById('route-date').value || new Date().toISOString().split('T')[0];
+  document.getElementById('exp-date-input').value = date;
+  _exportScope = 'day'; _exportFmt = 'csv';
+  _refreshExportUI();
+  openModal('export-modal');
+}
+
+function setExportScope(s) { _exportScope = s; _refreshExportUI(); }
+function setExportFmt(f)   { _exportFmt   = f; _refreshExportUI(); }
+
+function _refreshExportUI() {
+  // Scope buttons
+  ['day','week','hist'].forEach(s => {
+    const b = document.getElementById('exp-btn-'+s);
+    if (b) { b.className = 'btn btn-sm ' + (_exportScope===s ? 'btn-primary' : 'btn-outline'); }
+  });
+  // Format buttons
+  ['csv','html'].forEach(f => {
+    const b = document.getElementById('exp-fmt-'+f);
+    if (b) { b.className = 'btn btn-sm ' + (_exportFmt===f ? 'btn-primary' : 'btn-outline'); }
+  });
+  // Date row visibility
+  const dr = document.getElementById('exp-date-row');
+  if (dr) dr.style.display = _exportScope === 'day' ? '' : 'none';
+  // Preview text
+  const pt = document.getElementById('exp-preview-txt');
+  if (!pt) return;
+  const rows = _exportScope === 'day'
+    ? _buildDayRows(document.getElementById('exp-date-input').value || new Date().toISOString().split('T')[0])
+    : _exportScope === 'week'
+    ? _buildWeekRows()
+    : _buildHistRows();
+  const empCount = rows.length;
+  pt.textContent = empCount
+    ? `${empCount} fila(s) encontradas para exportar`
+    : 'No hay rutas configuradas en el período seleccionado';
+}
+
+function _dayOfWeek(iso) {
+  const dow = new Date(iso + 'T12:00:00').getDay();
+  return ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][dow];
+}
+
+function _buildDayRows(date) {
+  const rows = [];
+  S.shifts.forEach(sh => {
+    const sk = `${date}__${sh.id}`;
+    const dayR = S.routes[sk];
+    if (!dayR) return;
+    ['morning','evening'].forEach(type => {
+      const routes = dayR[type];
+      if (!routes?.length) return;
+      const typeLabel = type === 'morning' ? 'IDA' : 'VUELTA';
+      routes.forEach(r => {
+        const empStops = r.stops.filter(s => !s.isFactory);
+        empStops.forEach((s, si) => {
+          rows.push([
+            _fmtDate(date),
+            _dayOfWeek(date),
+            sh.name,
+            sh.start,
+            sh.end,
+            typeLabel,
+            r.vehicle.name,
+            r.vehicle.driver || '',
+            r.vehicle.phone  || '',
+            r.departureTime  || '',
+            si + 1,
+            s.name,
+            s.address || '',
+            r.km,
+            r.min
+          ]);
+        });
+      });
+    });
+  });
+  return rows;
+}
+
+function _buildWeekRows() {
+  const today  = new Date();
+  const dow    = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dow + 6) % 7));
+  const rows = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const iso = d.toISOString().split('T')[0];
+    rows.push(..._buildDayRows(iso));
+  }
+  return rows;
+}
+
+function _buildHistRows() {
+  const rows = [];
+  S.history.forEach(h => {
+    const sh = S.shifts.find(s => s.id === h.shiftId);
+    const typeLabel = h.type === 'morning' ? 'IDA' : 'VUELTA';
+    h.groups.forEach(g => {
+      const veh = S.vehicles.find(v => v.id === g.vehicleId);
+      g.empIds.forEach((empId, si) => {
+        const emp = S.employees.find(e => e.id === empId);
+        rows.push([
+          _fmtDate(h.date),
+          _dayOfWeek(h.date),
+          sh?.name || '',
+          sh?.start || '',
+          sh?.end   || '',
+          typeLabel,
+          g.vehicleName,
+          veh?.driver || '',
+          veh?.phone  || '',
+          '',
+          si + 1,
+          g.empNames[si] || empId,
+          emp?.address || '',
+          '',
+          ''
+        ]);
+      });
+    });
+  });
+  return rows;
+}
+
+function confirmExport() {
+  let rows, filename, title;
+  if (_exportScope === 'day') {
+    const date = document.getElementById('exp-date-input').value;
+    if (!date) { toast('Seleccioná una fecha'); return; }
+    rows = _buildDayRows(date);
+    filename = `rutas_${date}`;
+    title    = `Rutas — ${_fmtDate(date)}`;
+  } else if (_exportScope === 'week') {
+    rows = _buildWeekRows();
+    const today  = new Date();
+    const dow    = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((dow + 6) % 7));
+    const iso = monday.toISOString().split('T')[0];
+    filename = `rutas_semana_${iso}`;
+    title    = `Rutas Semana — ${_fmtDate(iso)}`;
+  } else {
+    rows = _buildHistRows();
+    filename = `historial_remises`;
+    title    = `Historial de Remises`;
+  }
+  if (!rows.length) { toast('No hay rutas para exportar'); return; }
+  closeModal('export-modal');
+  if (_exportFmt === 'csv') _downloadCSV(filename, rows);
+  else                      _downloadHTMLTable(filename, rows, title);
+}
+
+function _downloadCSV(filename, rows) {
+  const BOM = '﻿'; // UTF-8 BOM para Excel
+  const esc = v => {
+    const s = String(v ?? '');
+    return (s.includes(',') || s.includes('"') || s.includes('\n'))
+      ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const csv = BOM + [EXPORT_HEADERS, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
+  _triggerDownload(new Blob([csv], {type:'text/csv;charset=utf-8'}), filename + '.csv');
+  toast('📊 CSV descargado — abrilo con Excel o Google Sheets');
+}
+
+function _downloadHTMLTable(filename, rows, title) {
+  const ths = EXPORT_HEADERS.map(h => `<th>${h}</th>`).join('');
+  const trs = rows.map((r, ri) => {
+    const bg = ri % 2 === 0 ? '' : 'background:#f8fafc';
+    return `<tr style="${bg}">${r.map(c => `<td>${String(c??'')}</td>`).join('')}</tr>`;
+  }).join('');
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:24px;font-size:12px}
+    h1{font-size:17px;margin-bottom:16px;color:#1e293b}
+    table{border-collapse:collapse;width:100%;min-width:900px}
+    th{background:#1e293b;color:#fff;padding:7px 10px;text-align:left;white-space:nowrap;font-size:11px}
+    td{padding:6px 10px;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+    @media print{body{padding:0}button{display:none}}
+  </style></head><body>
+  <h1>📊 ${title}</h1>
+  <p style="color:#64748b;margin-bottom:12px">Exportado: ${new Date().toLocaleString('es-AR')} · ${rows.length} registros</p>
+  <table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>
+  <br><button onclick="window.print()" style="padding:8px 16px;background:#1e293b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">🖨 Imprimir</button>
+  </body></html>`;
+  _triggerDownload(new Blob([html], {type:'text/html;charset=utf-8'}), filename + '.html');
+  toast('🌐 Tabla HTML descargada');
+}
+
+function _triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ═══════════════════════════════════════════════

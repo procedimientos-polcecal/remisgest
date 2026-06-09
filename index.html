@@ -574,7 +574,7 @@ tbody tr:hover td{background:var(--blue-l)}
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <img src="./logo-pp.png" alt="Logo" style="height:38px;object-fit:contain" onerror="this.parentElement.innerHTML='🚗'">
+      <img src="./logo-pp.png" alt="Logo" style="height:38px;object-fit:contain" onerror="this.parentElement.innerHTML='RM'">
     </div>
     <h1>RemisGest</h1>
     <p class="login-sub">Ingresá con tu cuenta para acceder</p>
@@ -598,7 +598,7 @@ tbody tr:hover td{background:var(--blue-l)}
 
 <header>
   <div class="logo-wrap">
-    <img src="./logo-pp.png" alt="Logo" style="height:26px;width:26px;object-fit:contain" onerror="this.parentElement.textContent='🚗'">
+    <img src="./logo-pp.png" alt="Logo" style="height:26px;width:26px;object-fit:contain" onerror="this.parentElement.textContent='RM'">
   </div>
   <div>
     <h1>Gestión de Remises</h1>
@@ -611,12 +611,12 @@ tbody tr:hover td{background:var(--blue-l)}
 </header>
 
 <nav id="main-nav">
-  <button onclick="showTab('hoy')" id="nav-hoy" class="active">📅 Hoy</button>
-  <button onclick="showTab('semana')" id="nav-semana">📆 Semana</button>
-  <button onclick="showTab('empleados')" id="nav-empleados">👥 Empleados</button>
-  <button onclick="showTab('vehiculos')" id="nav-vehiculos">🚗 Vehículos</button>
-  <button onclick="showTab('config')" id="nav-config">⚙️ Configuración</button>
-  <button onclick="showTab('historial')" id="nav-historial">📋 Historial</button>
+  <button onclick="showTab('hoy')" id="nav-hoy" class="active">Hoy</button>
+  <button onclick="showTab('semana')" id="nav-semana">Semana</button>
+  <button onclick="showTab('empleados')" id="nav-empleados">Empleados</button>
+  <button onclick="showTab('vehiculos')" id="nav-vehiculos">Vehículos</button>
+  <button onclick="showTab('config')" id="nav-config">Configuración</button>
+  <button onclick="showTab('historial')" id="nav-historial">Historial</button>
 </nav>
 
 <!-- ══════════════ TAB HOY ══════════════ -->
@@ -624,13 +624,13 @@ tbody tr:hover td{background:var(--blue-l)}
   <div id="shift-bar-hoy" class="shift-bar"></div>
   <div class="controls">
     <input type="date" id="route-date" class="date-input" onchange="onDateChange()">
-    <button class="btn btn-success" onclick="generateRoutes('morning')">🌅 Generar Ida</button>
-    <button class="btn btn-amber" onclick="generateRoutes('evening')">🌆 Generar Vuelta</button>
+    <button class="btn btn-success" onclick="generateRoutes('morning')">Generar Ida</button>
+    <button class="btn btn-amber" onclick="generateRoutes('evening')">Generar Vuelta</button>
     <div style="display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0">
-      <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('morning')">📤 Ida</button>
-      <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('evening')">📤 Vuelta</button>
-      <button class="btn btn-ghost btn-sm" onclick="openExportModal()" title="Exportar a planilla">📊</button>
-      <button class="btn btn-ghost btn-sm" onclick="clearRoutes()" title="Limpiar rutas">🗑</button>
+      <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('morning')"> Ida</button>
+      <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('evening')"> Vuelta</button>
+      <button class="btn btn-ghost btn-sm" onclick="openExportModal()" title="Exportar a planilla">Exportar</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearRoutes()" title="Limpiar rutas">Borrar</button>
     </div>
   </div>
   <div class="hoy-layout">
@@ -681,17 +681,17 @@ tbody tr:hover td{background:var(--blue-l)}
 <!-- ══════════════ TAB EMPLEADOS ══════════════ -->
 <div id="tab-empleados" class="tab">
   <div class="template-bar">
-    <span>📥 Descargá la plantilla Excel, completala y volvé a importarla</span>
-    <button class="btn btn-outline btn-sm" onclick="downloadTemplate('employees')">⬇ Plantilla Excel</button>
+    <span> Descargá la plantilla Excel, completala y volvé a importarla</span>
+    <button class="btn btn-outline btn-sm" onclick="downloadTemplate('employees')">Plantilla Excel</button>
   </div>
   <div class="toolbar">
     <input type="text" class="search" id="emp-search" placeholder="Buscar empleado…" oninput="renderEmployees()">
     <button class="btn btn-primary" onclick="openEmpModal()">+ Agregar</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('emp-file').click()">⬆ Importar</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('emp-file').click()">Importar</button>
     <input type="file" id="emp-file" accept=".csv,.xlsx,.xls" onchange="importFile(this,'employees')" style="display:none">
   </div>
   <div class="import-zone" onclick="document.getElementById('emp-file').click()">
-    📂 Arrastrá o hacé clic para importar CSV o Excel<br>
+     Arrastrá o hacé clic para importar CSV o Excel<br>
     <small style="opacity:.7">Columnas: <code>Nombre · Dirección · Teléfono</code></small>
   </div>
   <div class="tbl-wrap">
@@ -703,7 +703,7 @@ tbody tr:hover td{background:var(--blue-l)}
     </table>
   </div>
   <div id="emp-empty" class="empty" style="display:none">
-    <div class="icon">👥</div>
+    <div class="icon"></div>
     <h3>Sin empleados</h3>
     <p>Agregá empleados manualmente, importá un archivo o descargá la plantilla Excel.</p>
   </div>
@@ -712,18 +712,18 @@ tbody tr:hover td{background:var(--blue-l)}
 <!-- ══════════════ TAB VEHÍCULOS ══════════════ -->
 <div id="tab-vehiculos" class="tab">
   <div class="template-bar">
-    <span>📥 Descargá la plantilla Excel, completala y volvé a importarla</span>
-    <button class="btn btn-outline btn-sm" onclick="downloadTemplate('vehicles')">⬇ Plantilla Excel</button>
+    <span> Descargá la plantilla Excel, completala y volvé a importarla</span>
+    <button class="btn btn-outline btn-sm" onclick="downloadTemplate('vehicles')">Plantilla Excel</button>
   </div>
   <div class="toolbar">
     <span style="font-size:13px;color:var(--muted);flex:1">Configurá los vehículos disponibles para el reparto.</span>
-    <button class="btn btn-ghost" onclick="document.getElementById('veh-file').click()">⬆ Importar</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('veh-file').click()">Importar</button>
     <input type="file" id="veh-file" accept=".csv,.xlsx,.xls" onchange="importFile(this,'vehicles')" style="display:none">
     <button class="btn btn-primary" onclick="openVehModal()">+ Agregar vehículo</button>
   </div>
   <div class="v-grid" id="v-grid"></div>
   <div id="v-empty" class="empty" style="display:none">
-    <div class="icon">🚗</div>
+    <div class="icon"></div>
     <h3>Sin vehículos</h3>
     <p>Agregá al menos un remise para generar rutas.</p>
     <button class="btn btn-primary" onclick="openVehModal()">+ Agregar vehículo</button>
@@ -733,7 +733,7 @@ tbody tr:hover td{background:var(--blue-l)}
 <!-- ══════════════ TAB CONFIGURACIÓN ══════════════ -->
 <div id="tab-config" class="tab">
   <div class="config-section">
-    <h2>📍 Ubicación de la Fábrica</h2>
+    <h2> Ubicación de la Fábrica</h2>
     <div class="form-group">
       <label>Nombre del establecimiento</label>
       <input class="form-control" id="cfg-name" placeholder="Ej: Fábrica Principal" oninput="saveConfig()">
@@ -750,7 +750,7 @@ tbody tr:hover td{background:var(--blue-l)}
       <div id="config-map" style="height:100%"></div>
     </div>
     <br>
-    <h2>🔍 Geocodificación</h2>
+    <h2> Geocodificación</h2>
     <div class="form-group">
       <label>Ciudad / Localidad de referencia</label>
       <input class="form-control" id="cfg-city" placeholder="Ej: Olavarría, Buenos Aires" oninput="saveConfig()">
@@ -759,13 +759,13 @@ tbody tr:hover td{background:var(--blue-l)}
       </small>
     </div>
     <br>
-    <h2>⚙️ Preferencias de Ruta</h2>
+    <h2> Preferencias de Ruta</h2>
     <div class="form-group">
       <label>Velocidad promedio (km/h) <small style="color:var(--muted)">(solo como referencia; OSRM calcula tiempos reales)</small></label>
       <input class="form-control" id="cfg-speed" type="number" value="40" min="10" max="120" style="width:100px" oninput="saveConfig()">
     </div>
     <br>
-    <h2>🕐 Turnos</h2>
+    <h2> Turnos</h2>
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Cada turno tiene su propia asistencia y rutas de ida/vuelta independientes.</p>
     <div id="cfg-shifts-list"></div>
     <button class="btn btn-ghost" onclick="openAddShiftModal()">+ Agregar turno</button>
@@ -776,15 +776,15 @@ tbody tr:hover td{background:var(--blue-l)}
 <div id="tab-historial" class="tab">
   <div style="max-width:700px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <h2 style="font-size:15px;font-weight:700;color:var(--text)">💾 Plantillas guardadas</h2>
-      <button class="btn btn-ghost btn-sm" onclick="openExportModal()" title="Exportar a planilla">📊 Exportar</button>
+      <h2 style="font-size:15px;font-weight:700;color:var(--text)">Guardar Plantillas guardadas</h2>
+      <button class="btn btn-ghost btn-sm" onclick="openExportModal()" title="Exportar a planilla">Exportar</button>
     </div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Configuraciones de remises guardadas para reutilizar la semana siguiente.</p>
     <div id="presets-list"></div>
     <br>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-      <h2 style="font-size:15px;font-weight:700;color:var(--text)">📋 Historial de rutas</h2>
-      <button class="btn btn-ghost btn-sm" onclick="setExportScope('hist');openExportModal()" title="Exportar historial">📊 Exportar</button>
+      <h2 style="font-size:15px;font-weight:700;color:var(--text)">Historial de rutas</h2>
+      <button class="btn btn-ghost btn-sm" onclick="setExportScope('hist');openExportModal()" title="Exportar historial">Exportar</button>
     </div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Se registra automáticamente cada vez que generás rutas. Últimas 60 configuraciones.</p>
     <div id="history-list"></div>
@@ -803,14 +803,14 @@ tbody tr:hover td{background:var(--blue-l)}
       <label>Dirección</label>
       <div class="form-row">
         <input class="form-control" id="emp-addr" placeholder="Ej: Mitre 456, Buenos Aires">
-        <button class="btn btn-outline" onclick="geocodeEmp()" id="emp-geo-btn">🔍</button>
+        <button class="btn btn-outline" onclick="geocodeEmp()" id="emp-geo-btn">Geocodificar</button>
       </div>
     </div>
     <div id="emp-geo-result" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
     <div id="emp-map-wrap" style="display:none;margin-top:10px;margin-bottom:4px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-        <span style="font-size:11px;font-weight:600;color:var(--muted)">📌 Validar ubicación — arrastrá el pin o hacé clic para corregir</span>
-        <button class="btn btn-ghost btn-sm" onclick="hideEmpMap()" style="padding:2px 7px;font-size:10px">✕ Cerrar mapa</button>
+        <span style="font-size:11px;font-weight:600;color:var(--muted)"> Validar ubicación — arrastrá el pin o hacé clic para corregir</span>
+        <button class="btn btn-ghost btn-sm" onclick="hideEmpMap()" style="padding:2px 7px;font-size:10px"> Cerrar mapa</button>
       </div>
       <div id="emp-modal-map" style="height:210px;border-radius:8px;overflow:hidden;border:1.5px solid var(--border)"></div>
       <div id="emp-map-coords" style="font-size:10px;color:var(--muted);margin-top:4px;text-align:right"></div>
@@ -870,7 +870,7 @@ tbody tr:hover td{background:var(--blue-l)}
 <div class="overlay" id="share-modal">
   <div class="modal" style="max-width:540px">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <div id="share-icon" style="font-size:28px;flex-shrink:0">📤</div>
+      <div id="share-icon" style="font-size:28px;flex-shrink:0"></div>
       <div style="flex:1;min-width:0">
         <h2 style="margin:0;font-size:16px" id="share-title">Compartir ruta</h2>
         <div id="share-subtitle" style="font-size:12px;color:var(--muted)"></div>
@@ -883,7 +883,7 @@ tbody tr:hover td{background:var(--blue-l)}
     </div>
 
     <div class="form-group" style="margin-bottom:6px">
-      <label>📱 Número de WhatsApp (con código de país, sin + ni 0)</label>
+      <label> Número de WhatsApp (con código de país, sin + ni 0)</label>
       <div style="display:flex;gap:8px">
         <input class="form-control" id="share-phone" placeholder="Ej: 5493516001234  (ARG = 549...)">
         <button class="btn btn-whatsapp" onclick="doWhatsApp(true)">Enviar</button>
@@ -894,12 +894,12 @@ tbody tr:hover td{background:var(--blue-l)}
     </div>
 
     <button class="btn btn-whatsapp" style="width:100%;margin-bottom:10px" onclick="doWhatsApp(false)">
-      📱 Elegir contacto en WhatsApp
+       Elegir contacto en WhatsApp
     </button>
 
     <div class="share-actions">
-      <button class="btn btn-outline" onclick="doShareEmail()">📧 Abrir en Email</button>
-      <button class="btn btn-primary" onclick="doShareCopy()">📋 Copiar mensaje</button>
+      <button class="btn btn-outline" onclick="doShareEmail()"> Abrir en Email</button>
+      <button class="btn btn-primary" onclick="doShareCopy()">Copiar mensaje</button>
     </div>
 
     <div class="modal-footer" style="margin-top:16px">
@@ -942,14 +942,14 @@ tbody tr:hover td{background:var(--blue-l)}
 <!-- ══════════════ MODAL AGREGAR PERSONA A REMIS ══════════════ -->
 <div class="overlay" id="add-emp-modal">
   <div class="modal" style="max-width:420px">
-    <h2>➕ Agregar persona al remis</h2>
+    <h2> Agregar persona al remis</h2>
     <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Seleccioná empleados para agregar a este vehículo. Los que están en otro remis serán movidos.</p>
     <div class="form-group">
       <div id="add-emp-list" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('add-emp-modal')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmAddEmp()">✔ Agregar</button>
+      <button class="btn btn-primary" onclick="confirmAddEmp()">Agregar</button>
     </div>
   </div>
 </div>
@@ -957,7 +957,7 @@ tbody tr:hover td{background:var(--blue-l)}
 <!-- ══════════════ MODAL EDITAR PLANTILLA ══════════════ -->
 <div class="overlay" id="edit-preset-modal">
   <div class="modal" style="max-width:520px">
-    <h2>✏️ Editar plantilla</h2>
+    <h2>Editar plantilla</h2>
     <div class="form-group">
       <label>Nombre de la plantilla</label>
       <input class="form-control" id="edit-preset-name" placeholder="Nombre">
@@ -966,8 +966,8 @@ tbody tr:hover td{background:var(--blue-l)}
       <div class="form-group">
         <label>Tipo</label>
         <select class="form-control" id="edit-preset-type">
-          <option value="morning">🌅 IDA (Búsqueda)</option>
-          <option value="evening">🌆 VUELTA (Retorno)</option>
+          <option value="morning"> IDA (Búsqueda)</option>
+          <option value="evening"> VUELTA (Retorno)</option>
         </select>
       </div>
       <div class="form-group">
@@ -981,7 +981,7 @@ tbody tr:hover td{background:var(--blue-l)}
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('edit-preset-modal')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmEditPreset()">💾 Guardar cambios</button>
+      <button class="btn btn-primary" onclick="confirmEditPreset()">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -989,7 +989,7 @@ tbody tr:hover td{background:var(--blue-l)}
 <!-- ══════════════ MODAL AGREGAR REMIS ══════════════ -->
 <div class="overlay" id="add-route-modal">
   <div class="modal" style="max-width:480px">
-    <h2>➕ Agregar remis</h2>
+    <h2>+ Agregar remis</h2>
     <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Seleccioná el vehículo y los empleados para esta ruta adicional.</p>
     <div class="form-group">
       <label>Vehículo</label>
@@ -1001,7 +1001,7 @@ tbody tr:hover td{background:var(--blue-l)}
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('add-route-modal')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmAddRoute()">▶ Calcular y agregar</button>
+      <button class="btn btn-primary" onclick="confirmAddRoute()">Calcular y agregar</button>
     </div>
   </div>
 </div>
@@ -1009,7 +1009,7 @@ tbody tr:hover td{background:var(--blue-l)}
 <!-- ══════════════ MODAL GUARDAR PLANTILLA ══════════════ -->
 <div class="overlay" id="preset-save-modal">
   <div class="modal" style="max-width:420px">
-    <h2>💾 Guardar como plantilla</h2>
+    <h2>Guardar como plantilla</h2>
     <div class="form-group">
       <label>Nombre de la plantilla</label>
       <input class="form-control" id="preset-name-input" placeholder="Ej: Lunes tipo – IDA Mañana"
@@ -1035,13 +1035,13 @@ tbody tr:hover td{background:var(--blue-l)}
     <div class="form-group">
       <label>Tipo de viaje</label>
       <select class="form-control" id="apply-type-select">
-        <option value="morning">🌅 IDA (Búsqueda)</option>
-        <option value="evening">🌆 VUELTA (Retorno)</option>
+        <option value="morning"> IDA (Búsqueda)</option>
+        <option value="evening"> VUELTA (Retorno)</option>
       </select>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('apply-preset-modal')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmApplyPreset()">▶ Aplicar y calcular rutas</button>
+      <button class="btn btn-primary" onclick="confirmApplyPreset()">Aplicar y calcular rutas</button>
     </div>
   </div>
 </div>
@@ -1049,13 +1049,13 @@ tbody tr:hover td{background:var(--blue-l)}
 <!-- ══════════════ MODAL EXPORTAR PLANILLA ══════════════ -->
 <div class="overlay" id="export-modal">
   <div class="modal" style="max-width:440px">
-    <h2>📊 Exportar configuración</h2>
+    <h2>Exportar configuración</h2>
     <div class="form-group">
       <label>¿Qué exportar?</label>
       <div style="display:flex;gap:8px">
-        <button id="exp-btn-day"  class="btn btn-primary btn-sm"  onclick="setExportScope('day')">📅 Día</button>
-        <button id="exp-btn-week" class="btn btn-outline btn-sm" onclick="setExportScope('week')">📆 Semana</button>
-        <button id="exp-btn-hist" class="btn btn-outline btn-sm" onclick="setExportScope('hist')">🗂 Historial</button>
+        <button id="exp-btn-day"  class="btn btn-primary btn-sm"  onclick="setExportScope('day')">Dia</button>
+        <button id="exp-btn-week" class="btn btn-outline btn-sm" onclick="setExportScope('week')">Semana</button>
+        <button id="exp-btn-hist" class="btn btn-outline btn-sm" onclick="setExportScope('hist')">Historial</button>
       </div>
     </div>
     <div class="form-group" id="exp-date-row">
@@ -1065,15 +1065,15 @@ tbody tr:hover td{background:var(--blue-l)}
     <div class="form-group">
       <label>Formato</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button id="exp-fmt-xlsx" class="btn btn-primary btn-sm"  onclick="setExportFmt('xlsx')">📊 Excel (XLSX)</button>
-        <button id="exp-fmt-csv"  class="btn btn-outline btn-sm" onclick="setExportFmt('csv')">📋 CSV</button>
-        <button id="exp-fmt-html" class="btn btn-outline btn-sm" onclick="setExportFmt('html')">🌐 HTML</button>
+        <button id="exp-fmt-xlsx" class="btn btn-primary btn-sm"  onclick="setExportFmt('xlsx')">Excel (XLSX)</button>
+        <button id="exp-fmt-csv"  class="btn btn-outline btn-sm" onclick="setExportFmt('csv')">CSV</button>
+        <button id="exp-fmt-html" class="btn btn-outline btn-sm" onclick="setExportFmt('html')"> HTML</button>
       </div>
     </div>
     <p id="exp-preview-txt" style="font-size:12px;color:var(--muted);margin:0 0 4px"></p>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('export-modal')">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmExport()">⬇ Descargar</button>
+      <button class="btn btn-primary" onclick="confirmExport()">Descargar</button>
     </div>
   </div>
 </div>
@@ -1092,7 +1092,7 @@ const COLORS = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06
 const DAY_NAMES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
 // ═══════════════════════════════════════════════════════════════════════
-//  🔑 FIREBASE CONFIG — Para login y sincronización multi-dispositivo
+//   FIREBASE CONFIG — Para login y sincronización multi-dispositivo
 //  Pasos:
 //   1. Ir a https://console.firebase.google.com → Crear proyecto
 //   2. Agregar app web → copiar el objeto firebaseConfig
@@ -1242,7 +1242,7 @@ function initCfgMap() {
     S.factory.lat = e.latlng.lat; S.factory.lng = e.latlng.lng;
     if (cfgMarker) cfgMap.removeLayer(cfgMarker);
     cfgMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(cfgMap).bindPopup('Fábrica').openPopup();
-    document.getElementById('cfg-coords').textContent = `📍 ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+    document.getElementById('cfg-coords').textContent = ` ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
     save();
   });
 }
@@ -1256,7 +1256,7 @@ function ensureEmpMap() {
     setEmpMarker(e.latlng.lat, e.latlng.lng);
     setEmpGeoBtn(e.latlng.lat, e.latlng.lng);
     document.getElementById('emp-geo-result').innerHTML =
-      `<span style="color:var(--green)">📌 Ubicación ajustada manualmente</span>`;
+      `<span style="color:var(--green)"> Ubicación ajustada manualmente</span>`;
   });
 }
 function setEmpMarker(lat, lng) {
@@ -1267,7 +1267,7 @@ function setEmpMarker(lat, lng) {
     const p = empMarker.getLatLng();
     setEmpGeoBtn(p.lat, p.lng);
     document.getElementById('emp-geo-result').innerHTML =
-      `<span style="color:var(--green)">📌 Posición ajustada</span>`;
+      `<span style="color:var(--green)"> Posición ajustada</span>`;
   });
 }
 function setEmpGeoBtn(lat, lng) {
@@ -1305,7 +1305,7 @@ function renderMapRoutes(routes, type) {
     route.stops.forEach((stop, si) => {
       const isF = stop.isFactory;
       const icon = L.divIcon({
-        html:`<div style="background:${isF?'#f59e0b':color};color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${isF?'14':'12'}px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">${isF?'🏭':si+1}</div>`,
+        html:`<div style="background:${isF?'#f59e0b':color};color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${isF?'14':'12'}px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">${isF?'':si+1}</div>`,
         className:'',iconSize:[28,28],iconAnchor:[14,14]
       });
       mapLayers.push(L.marker([stop.lat,stop.lng],{icon}).addTo(map).bindPopup(`<b>${stop.name}</b><br><small>${stop.address||''}</small>`));
@@ -1345,14 +1345,14 @@ async function geocodeFactory() {
   btn.innerHTML='Geocodificar'; btn.disabled=false;
   if (res) {
     S.factory.lat=res.lat; S.factory.lng=res.lng;
-    document.getElementById('cfg-coords').textContent=`📍 ${res.lat.toFixed(5)}, ${res.lng.toFixed(5)}`;
+    document.getElementById('cfg-coords').textContent=` ${res.lat.toFixed(5)}, ${res.lng.toFixed(5)}`;
     save();
     if (cfgMap) {
       cfgMap.setView([res.lat,res.lng],15);
       if (cfgMarker) cfgMap.removeLayer(cfgMarker);
       cfgMarker = L.marker([res.lat,res.lng]).addTo(cfgMap).bindPopup(S.factory.name||'Fábrica').openPopup();
     }
-    toast('✅ Ubicación de fábrica guardada');
+    toast('Ubicación de fábrica guardada');
   } else toast('No se pudo geocodificar la dirección');
 }
 async function geocodeEmp() {
@@ -1361,10 +1361,10 @@ async function geocodeEmp() {
   const btn = document.getElementById('emp-geo-btn');
   btn.innerHTML='<span class="spin"></span>'; btn.disabled=true;
   const res = await geocode(addr);
-  btn.innerHTML='🔍'; btn.disabled=false;
+  btn.innerHTML=''; btn.disabled=false;
   const info = document.getElementById('emp-geo-result');
   if (res) {
-    info.innerHTML=`✅ <span style="color:var(--green)">${res.display.split(',').slice(0,3).join(', ')}</span>`;
+    info.innerHTML=` <span style="color:var(--green)">${res.display.split(',').slice(0,3).join(', ')}</span>`;
     btn.dataset.lat=res.lat; btn.dataset.lng=res.lng;
     showEmpMap(res.lat, res.lng);   // mostrar mapa de validación
   } else {
@@ -1388,7 +1388,7 @@ async function geocodeAllMissing() {
     await new Promise(r => setTimeout(r,1100));
   }
   save(); renderEmployees(); renderAttendance();
-  toast('✅ Geocodificación completa');
+  toast('Geocodificación completa');
 }
 
 // ═══════════════════════════════════════════════
@@ -1541,7 +1541,7 @@ async function generateRoutes(type, employeeOverride) {
   const emps = S.employees.filter(e => presentIds.includes(e.id) && e.lat && e.lng);
   const noCoords = S.employees.filter(e => presentIds.includes(e.id) && (!e.lat||!e.lng));
   if (!emps.length) { toast('Los empleados marcados no tienen coordenadas. Geocodificá primero.'); return null; }
-  if (noCoords.length) toast(`⚠️ ${noCoords.length} empleado(s) sin coordenadas serán ignorados`);
+  if (noCoords.length) toast(` ${noCoords.length} empleado(s) sin coordenadas serán ignorados`);
 
   setGenerating(true, `Obteniendo matriz de distancias para ${emps.length} empleados…`);
 
@@ -1558,7 +1558,7 @@ async function generateRoutes(type, employeeOverride) {
   k = Math.min(k, sortedVehs.length);
   const vehsToUse = sortedVehs.slice(0, k);
   if (totalCap < emps.length)
-    toast(`⚠️ Capacidad total (${totalCap}) < empleados (${emps.length}). Se repartirán de todas formas.`);
+    toast(` Capacidad total (${totalCap}) < empleados (${emps.length}). Se repartirán de todas formas.`);
 
   // allPoints: factory at index 0, employees at 1..N
   const allPoints = [factory, ...emps];
@@ -1623,7 +1623,7 @@ async function generateRoutes(type, employeeOverride) {
   renderRouteCards(routes, type);
   renderMapRoutes(routes, type);
   hoyTab(type==='morning'?'ida':'vuelta');
-  toast(`✅ ${routes.length} ruta(s) generadas`);
+  toast(` ${routes.length} ruta(s) generadas`);
   return routes;
 }
 
@@ -1642,7 +1642,7 @@ function clearRoutes() {
 function renderRouteCards(routes, type) {
   const container = document.getElementById(type==='morning'?'routes-morning':'routes-evening');
   if (!routes||!routes.length) {
-    container.innerHTML='<div class="empty"><div class="icon">🗺️</div><h3>Sin rutas</h3><p>Generá las rutas desde los botones de arriba.</p></div>';
+    container.innerHTML='<div class="empty"><div class="icon"></div><h3>Sin rutas</h3><p>Generá las rutas desde los botones de arriba.</p></div>';
     return;
   }
   container.innerHTML = routes.map((r,ri)=>{
@@ -1653,7 +1653,7 @@ function renderRouteCards(routes, type) {
       if (s.isFactory) return `
         <div class="stop-row">
           <div class="connector"></div>
-          <div class="stop-num stop-factory-icon">🏭</div>
+          <div class="stop-num stop-factory-icon">F</div>
           <div style="flex:1;min-width:0"><div class="stop-name">${escHtml(s.name)}</div><div class="stop-addr">${escHtml(s.address||'')}</div></div>
         </div>`;
 
@@ -1689,7 +1689,7 @@ function renderRouteCards(routes, type) {
             <button class="sctrl-btn" ${canUp?`onclick="reorderStop(${ri},${si},-1,'${type}')"`:'disabled'} title="Subir">▲</button>
             <button class="sctrl-btn" ${canDown?`onclick="reorderStop(${ri},${si},1,'${type}')"`:'disabled'} title="Bajar">▼</button>
             ${moveBtn}
-            <button class="sctrl-btn" onclick="removeEmpFromRoute(${ri},${si},'${type}')" title="Quitar de este remis" style="color:var(--danger,#ef4444)">✕</button>
+            <button class="sctrl-btn" onclick="removeEmpFromRoute(${ri},${si},'${type}')" title="Quitar de este remis" style="color:var(--danger,#ef4444)">X</button>
           </div>
         </div>`;
     }).join('');
@@ -1711,28 +1711,28 @@ function renderRouteCards(routes, type) {
         <div class="v-dot" style="background:${color}">${ri+1}</div>
         <h3>${escHtml(r.vehicle.name)}</h3>
         <div class="route-stats">
-          <span class="stat-chip stat-chip-km">📏 ${r.km} km</span>
-          <span class="stat-chip stat-chip-min">⏱ ~${r.min} min</span>
-          <span class="stat-chip stat-chip-pax">👥 ${empCount}${r.vehicle.capacity?'/'+r.vehicle.capacity:''}</span>
-          ${isOsrm?'<span class="stat-chip stat-chip-road">🛣️ real</span>':''}
-          <label class="stat-chip" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;background:var(--surface-2,#f8fafc);border:1px solid var(--border);cursor:pointer" title="Horario de salida del remis">🕐<input type="time" value="${r.departureTime||''}" style="border:none;background:transparent;font-size:11px;width:72px;outline:none;cursor:pointer;color:inherit" onchange="updateDepartureTime(${ri},'${type}',this.value)"></label>
+          <span class="stat-chip stat-chip-km">${r.km} km</span>
+          <span class="stat-chip stat-chip-min">~${r.min} min</span>
+          <span class="stat-chip stat-chip-pax">${empCount}${r.vehicle.capacity?'/'+r.vehicle.capacity:''} pax</span>
+          ${isOsrm?'<span class="stat-chip stat-chip-road">Ruta real</span>':''}
+          <label class="stat-chip" style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;background:var(--surface-2,#f8fafc);border:1px solid var(--border);cursor:pointer;font-size:11px" title="Horario de salida del remis">Salida:<input type="time" value="${r.departureTime||''}" style="border:none;background:transparent;font-size:11px;width:72px;outline:none;cursor:pointer;color:inherit" onchange="updateDepartureTime(${ri},'${type}',this.value)"></label>
         </div>
       </div>
       <div class="stops-list">${stopsHtml}</div>
       <div class="route-actions" style="flex-wrap:wrap;gap:6px">
-        <a href="${gmUrl}" target="_blank" class="btn btn-primary btn-sm">📍 Google Maps</a>
-        <a href="${wazeUrl}" target="_blank" class="btn btn-outline btn-sm">📱 Waze</a>
-        <button class="btn btn-whatsapp btn-sm" onclick="openShareRoute(${ri},'${type}')">📤 Compartir</button>
-        <button class="btn btn-ghost btn-sm" onclick="printRoute(${ri},'${type}')">🖨️ Imprimir</button>
-        <button class="btn btn-ghost btn-sm" onclick="copyRouteText(${ri},'${type}')">📋 Copiar</button>
-        <button class="btn btn-outline btn-sm" onclick="openAddEmpModal(${ri},'${type}')" title="Agregar o mover empleados a este remis">➕ Persona</button>
-        <button class="btn btn-danger btn-sm" onclick="removeRouteVehicle(${ri},'${type}')" title="Quitar este remis de la ruta">🚫 Quitar remis</button>
+        <a href="${gmUrl}" target="_blank" class="btn btn-primary btn-sm">Google Maps</a>
+        <a href="${wazeUrl}" target="_blank" class="btn btn-outline btn-sm">Waze</a>
+        <button class="btn btn-whatsapp btn-sm" onclick="openShareRoute(${ri},'${type}')">Compartir</button>
+        <button class="btn btn-ghost btn-sm" onclick="printRoute(${ri},'${type}')">Imprimir</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyRouteText(${ri},'${type}')">Copiar</button>
+        <button class="btn btn-outline btn-sm" onclick="openAddEmpModal(${ri},'${type}')" title="Agregar o mover empleados a este remis">+ Persona</button>
+        <button class="btn btn-danger btn-sm" onclick="removeRouteVehicle(${ri},'${type}')" title="Quitar este remis de la ruta">Quitar remis</button>
       </div>
     </div>`;
   }).join('') +
   `<div style="padding:6px 2px 10px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
-     <button class="btn btn-outline btn-sm" onclick="openAddRouteModal('${type}')">➕ Agregar remis</button>
-     <button class="btn btn-ghost btn-sm" onclick="openSavePresetModal('${type}')">💾 Guardar como plantilla</button>
+     <button class="btn btn-outline btn-sm" onclick="openAddRouteModal('${type}')">+ Agregar remis</button>
+     <button class="btn btn-ghost btn-sm" onclick="openSavePresetModal('${type}')">Guardar como plantilla</button>
    </div>`;
 }
 
@@ -1784,7 +1784,7 @@ function moveEmpToRoute(fromIdx, stopIdx, toIdx, type) {
   save();
   renderRouteCards(active, type);
   renderMapRoutes(active, type);
-  toast(`✅ Empleado movido a ${toRoute.vehicle.name}`);
+  toast(` Empleado movido a ${toRoute.vehicle.name}`);
 
   // Recalcular geometría de las rutas afectadas
   active.forEach((r, i) => {
@@ -1819,56 +1819,68 @@ function loadSavedRoutes() {
 //  PRINT / COPY
 // ═══════════════════════════════════════════════
 function printRoute(idx, type) {
-  const date=document.getElementById('route-date').value;
-  const routes=S.routes[_sk(date)]?.[type];
+  const date   = document.getElementById('route-date').value;
+  const routes = S.routes[_sk(date)]?.[type];
   if (!routes||!routes[idx]) return;
-  const r=routes[idx], label=type==='morning'?'IDA (Búsqueda)':'VUELTA (Retorno)';
-  const sh=S.shifts.find(s=>s.id===currentShiftId);
-  const stopsHtml=r.stops.map((s,si)=>
-    `<tr><td style="font-size:18px;font-weight:700;text-align:center;padding:8px">${s.isFactory?'🏭':si+1}</td>
-     <td style="padding:8px;font-weight:600">${escHtml(s.name)}</td>
-     <td style="padding:8px;color:#555">${escHtml(s.address||'')}</td></tr>`).join('');
-  const w=window.open('','_blank');
+  const r     = routes[idx];
+  const label = type === 'morning' ? 'IDA (Busqueda)' : 'VUELTA (Retorno)';
+  const sh    = S.shifts.find(s => s.id === currentShiftId);
+  const stopsHtml = r.stops.map((s,si) =>
+    `<tr>
+      <td style="font-size:16px;font-weight:700;text-align:center;padding:8px;width:36px">${s.isFactory ? 'FAB' : si+1}</td>
+      <td style="padding:8px;font-weight:600">${escHtml(s.name)}</td>
+      <td style="padding:8px;color:#555">${escHtml(s.address||'')}</td>
+    </tr>`).join('');
+  const w = window.open('','_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hoja de Ruta</title>
-    <style>body{font-family:Arial,sans-serif;padding:24px}h1{font-size:20px}h2{font-size:16px;color:#555}
-    .meta{font-size:13px;color:#555;line-height:1.8;margin:6px 0 12px}
-    table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#f1f5f9;padding:8px;text-align:left;font-size:13px}
-    td{border-bottom:1px solid #e2e8f0}</style></head><body>
-    <h1>🚗 Hoja de Ruta — ${label}</h1>
-    <h2>${escHtml(r.vehicle.name)}${r.vehicle.driver?' | '+escHtml(r.vehicle.driver):''}</h2>
+    <style>
+      body{font-family:Arial,sans-serif;padding:24px;color:#1e293b}
+      h1{font-size:18px;margin-bottom:4px}
+      h2{font-size:14px;color:#475569;margin-bottom:12px}
+      .meta{font-size:13px;color:#475569;line-height:2;margin-bottom:16px;border-bottom:2px solid #e2e8f0;padding-bottom:12px}
+      .meta b{color:#1e293b}
+      table{width:100%;border-collapse:collapse;margin-top:8px}
+      th{background:#1e293b;color:#fff;padding:8px 10px;text-align:left;font-size:12px}
+      td{padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:13px}
+      tr:nth-child(even) td{background:#f8fafc}
+      @media print{button{display:none}}
+    </style></head><body>
+    <h1>Hoja de Ruta — ${label}</h1>
+    <h2>${escHtml(r.vehicle.name)}${r.vehicle.driver ? '  |  ' + escHtml(r.vehicle.driver) : ''}${r.vehicle.phone ? '  |  Tel: ' + escHtml(r.vehicle.phone) : ''}</h2>
     <div class="meta">
-      📅 Fecha: <b>${_fmtDate(date)}</b><br>
-      ${sh?`🏢 Turno: <b>${escHtml(sh.name)}</b> &nbsp;•&nbsp; 🕐 <b>${sh.start} – ${sh.end}</b><br>`:''}
-      ${r.departureTime?`🚐 Salida del remis: <b>${r.departureTime} hs</b><br>`:''}
-      📏 ${r.km} km &nbsp;·&nbsp; ~${r.min} min
+      Fecha: <b>${_fmtDate(date)}</b>${sh ? `&emsp;Turno: <b>${escHtml(sh.name)}</b>&emsp;Fabrica: <b>${sh.start} hs</b>` : ''}
+      <br>${r.km} km  —  aprox. ${r.min} min
     </div>
-    <table><thead><tr><th>#</th><th>Nombre</th><th>Dirección</th></tr></thead><tbody>${stopsHtml}</tbody></table>
+    <table>
+      <thead><tr><th>#</th><th>Nombre</th><th>Direccion</th></tr></thead>
+      <tbody>${stopsHtml}</tbody>
+    </table>
     </body></html>`);
   w.document.close(); w.print();
 }
 function copyRouteText(idx, type) {
-  const date=document.getElementById('route-date').value;
-  const routes=S.routes[_sk(date)]?.[type];
+  const date   = document.getElementById('route-date').value;
+  const routes = S.routes[_sk(date)]?.[type];
   if (!routes||!routes[idx]) return;
-  const r=routes[idx], label=type==='morning'?'IDA (Búsqueda)':'VUELTA (Retorno)';
-  const sh=S.shifts.find(s=>s.id===currentShiftId);
-  const lines=[
-    `🚗 RUTA ${label} — ${_fmtDate(date)}`,
-    sh ? `🏢 Turno: ${sh.name}  •  🕐 ${sh.start} – ${sh.end}` : '',
-    r.departureTime ? `🚐 Salida del remis: ${r.departureTime} hs` : '',
-    `🚌 Vehículo: ${r.vehicle.name}`,
-    r.vehicle.driver ? `👤 Conductor: ${r.vehicle.driver}` : '',
-    r.vehicle.phone  ? `📞 Tel: ${r.vehicle.phone}` : '',
+  const r     = routes[idx];
+  const label = type === 'morning' ? 'IDA (Busqueda)' : 'VUELTA (Retorno)';
+  const sh    = S.shifts.find(s => s.id === currentShiftId);
+  const lines = [
+    `RUTA ${label} — ${_fmtDate(date)}`,
+    sh  ? `Turno: ${sh.name}  |  Fabrica: ${sh.start} hs` : '',
+    `Vehiculo: ${r.vehicle.name}`,
+    r.vehicle.driver ? `Conductor: ${r.vehicle.driver}` : '',
+    r.vehicle.phone  ? `Tel: ${r.vehicle.phone}` : '',
     '',
-    ...r.stops.map((s,si) =>
+    ...r.stops.map((s, si) =>
       s.isFactory
-        ? `🏭 ${s.name}${s.address?' — '+s.address:''}`
-        : `${si+1}. ${s.name}${s.address?' — '+s.address:''}`
+        ? `${s.name}${s.address ? ' — ' + s.address : ''}`
+        : `${si+1}. ${s.name}${s.address ? ' — ' + s.address : ''}`
     ),
     '',
-    `📏 ${r.km} km · ~${r.min} min`
+    `${r.km} km  |  aprox. ${r.min} min`
   ].filter(Boolean).join('\n');
-  navigator.clipboard.writeText(lines).then(()=>toast('📋 Ruta copiada al portapapeles'));
+  navigator.clipboard.writeText(lines).then(() => toast('Ruta copiada al portapapeles'));
 }
 
 // ═══════════════════════════════════════════════
@@ -1883,7 +1895,7 @@ function _fmtDate(iso) {
 }
 function _shiftLabel(sh) {
   if (!sh) return '';
-  return `${sh.name}  •  🕐 ${sh.start} – ${sh.end}`;
+  return `${sh.name}  •   ${sh.start} – ${sh.end}`;
 }
 
 function _gmLink(route) {
@@ -1893,57 +1905,52 @@ function _gmLink(route) {
 }
 
 function buildRouteMsg(route, date, type, sh=null) {
-  const dep   = route.departureTime || '';
   const lType = type === 'morning' ? 'IDA' : 'VUELTA';
-  const lDir  = type === 'morning' ? 'Búsqueda' : 'Retorno';
-  const headerLabel = dep
-    ? `${lType} (${lDir} · ${dep} hs)`
-    : `${lType} (${lDir})`;
+  const lDir  = type === 'morning' ? 'Busqueda' : 'Retorno';
   const lines = [
-    `🚗 *${headerLabel} — ${_fmtDate(date)}*`,
-    sh ? `🏢 Turno: *${sh.name}*  •  🕐 Entrada ${sh.start} hs` : null,
-    `🚌 Vehículo: *${route.vehicle.name}*`,
-    route.vehicle.driver ? `👤 Conductor: ${route.vehicle.driver}` : null,
-    route.vehicle.phone  ? `📞 Tel: ${route.vehicle.phone}` : null,
+    `*${lType} (${lDir}) — ${_fmtDate(date)}*`,
+    sh ? `Turno: *${sh.name}*  |  Fabrica: *${sh.start} hs*` : null,
+    `Vehiculo: *${route.vehicle.name}*`,
+    route.vehicle.driver ? `Conductor: ${route.vehicle.driver}` : null,
+    route.vehicle.phone  ? `Tel: ${route.vehicle.phone}` : null,
     '',
-    '📍 *Recorrido:*',
-    ...route.stops.map((s,si) =>
+    '*Recorrido:*',
+    ...route.stops.map((s, si) =>
       s.isFactory
-        ? `🏭 ${s.name}${s.address?' – '+s.address:''}`
-        : `${si+1}. *${s.name}*${s.address?'\n   📍 '+s.address:''}`
+        ? `${s.name}${s.address ? ' — ' + s.address : ''}`
+        : `${si+1}. *${s.name}*${s.address ? '\n   ' + s.address : ''}`
     ),
     '',
-    `📏 ${route.km} km · ~${route.min} min`
+    `${route.km} km  |  aprox. ${route.min} min`
   ];
-  return lines.filter(l=>l!==null).join('\n');
+  return lines.filter(l => l !== null).join('\n');
 }
 
 function buildDayMsg(date, type, routeKey) {
   const key     = routeKey || _sk(date);
   const routes  = S.routes[key]?.[type];
   if (!routes||!routes.length) return null;
-  const label   = type==='morning' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
-  const factory = S.factory.name || 'Fábrica';
-  const sh      = S.shifts.find(s=>s.id===key.split('__')[1]);
+  const lType   = type === 'morning' ? 'IDA' : 'VUELTA';
+  const lDir    = type === 'morning' ? 'Busqueda' : 'Retorno';
+  const factory = S.factory.name || 'Fabrica';
+  const sh      = S.shifts.find(s => s.id === key.split('__')[1]);
   const lines   = [
-    `📤 *RUTAS ${label.toUpperCase()} — ${_fmtDate(date)}*`,
-    `🏭 ${factory}`,
-    sh ? `🏢 Turno: *${sh.name}*  •  🕐 Entrada ${sh.start} hs` : null,
-    '━━━━━━━━━━━━━━━━━━',
+    `*RUTAS ${lType} (${lDir}) — ${_fmtDate(date)}*`,
+    factory,
+    sh ? `Turno: *${sh.name}*  |  Fabrica: *${sh.start} hs*` : null,
+    '──────────────────',
   ];
-  routes.forEach((r) => {
+  routes.forEach(r => {
     lines.push('');
-    const rDep = r.departureTime ? ` · Búsqueda ${r.departureTime} hs` : '';
-    lines.push(`🚗 *${r.vehicle.name}*${r.vehicle.driver?' – '+r.vehicle.driver:''}${rDep}`);
-    r.stops.forEach((s,si) =>
+    lines.push(`*${r.vehicle.name}*${r.vehicle.driver ? ' — ' + r.vehicle.driver : ''}`);
+    r.stops.forEach((s, si) =>
       lines.push(s.isFactory
-        ? `   🏭 ${s.name}`
-        : `   ${si+1}. ${s.name}${s.address?' ('+s.address+')':''}`)
+        ? `   ${s.name}${s.address ? ' — ' + s.address : ''}`
+        : `   ${si+1}. ${s.name}${s.address ? ' (' + s.address + ')' : ''}`)
     );
-    lines.push(`   📏 ${r.km} km · ~${r.min} min`);
-    lines.push(`   🗺️ ${_gmLink(r)}`);
+    lines.push(`   ${r.km} km  |  aprox. ${r.min} min`);
   });
-  return lines.filter(l=>l!==null).join('\n');
+  return lines.filter(l => l !== null).join('\n');
 }
 
 function _openShareModal(msg, title, subtitle, phone='') {
@@ -1964,12 +1971,11 @@ function openShareRoute(routeIdx, type) {
   const color      = COLORS[routeIdx % COLORS.length];
   const sh = S.shifts.find(s=>s.id===currentShiftId);
   document.getElementById('share-icon').innerHTML =
-    `<div style="width:34px;height:34px;background:${color};border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px">🚗</div>`;
-  const dep = r.departureTime ? ` · ${r.departureTime} hs` : '';
+    `<div style="width:34px;height:34px;background:${color};border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px"></div>`;
   _openShareModal(
     buildRouteMsg(r, date, type, sh),
     `${r.vehicle.name}`,
-    `${type==='morning'?'🌅 Ida':'🌆 Vuelta'}${sh?' · '+sh.name+' ('+sh.start+' hs)':''}${dep} · ${_fmtDate(date)} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
+    `${type==='morning'?'Ida':'Vuelta'}${sh?' · '+sh.name+' ('+sh.start+' hs)':''} · ${_fmtDate(date)} · ${r.stops.filter(s=>!s.isFactory).length} pasajeros`,
     r.vehicle.phone||''
   );
 }
@@ -1982,7 +1988,7 @@ function openShareDay(type) {
   if (!routes||!routes.length) { toast('Primero generá las rutas de '+(type==='morning'?'Ida':'Vuelta')); return; }
   const msg = buildDayMsg(date, type, sk);
   if (!msg) { toast('Sin rutas para compartir'); return; }
-  document.getElementById('share-icon').textContent = '📤';
+  document.getElementById('share-icon').textContent = '';
   _openShareModal(
     msg,
     `Rutas del día – ${type==='morning'?'Ida':'Vuelta'}`,
@@ -1995,7 +2001,7 @@ function openShareWeekDay(date, type) {
   const routes = S.routes[wsk]?.[type];
   if (!routes||!routes.length) { toast('Generá las rutas antes de compartir'); return; }
   const msg = buildDayMsg(date, type, wsk);
-  document.getElementById('share-icon').textContent = '📤';
+  document.getElementById('share-icon').textContent = '';
   _openShareModal(
     msg,
     `Rutas – ${type==='morning'?'Ida':'Vuelta'}`,
@@ -2024,7 +2030,7 @@ function doShareEmail() {
 function doShareCopy() {
   const msg = document.getElementById('share-msg').value;
   navigator.clipboard.writeText(msg).then(()=>{
-    toast('📋 Mensaje copiado al portapapeles');
+    toast('Mensaje copiado al portapapeles');
     closeModal('share-modal');
   });
 }
@@ -2047,14 +2053,14 @@ function renderAttendance() {
   const active=S.employees.filter(e=>e.active!==false);
   const el=document.getElementById('att-list');
   if (!active.length) {
-    el.innerHTML=`<div class="empty"><div class="icon">👥</div><h3>Sin empleados</h3><p>Agregá empleados en la pestaña Empleados.</p><button class="btn btn-primary" onclick="showTab('empleados')">Ir a Empleados</button></div>`;
+    el.innerHTML=`<div class="empty"><div class="icon"></div><h3>Sin empleados</h3><p>Agregá empleados en la pestaña Empleados.</p><button class="btn btn-primary" onclick="showTab('empleados')">Ir a Empleados</button></div>`;
     document.getElementById('att-count').textContent=''; return;
   }
   el.innerHTML=active.map(e=>{
     const on=presentIds.has(e.id), hasC=e.lat&&e.lng;
     const initials=e.name.trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
     return `<div class="att-item ${on?'on':''}" onclick="toggleAtt('${e.id}')">
-      <div class="att-avatar">${on?'✓':initials}</div>
+      <div class="att-avatar">${on?'':initials}</div>
       <div style="flex:1;overflow:hidden">
         <div class="att-name">${escHtml(e.name)}</div>
         <div class="att-addr">${escHtml(e.address||'Sin dirección')}</div>
@@ -2150,7 +2156,7 @@ function renderWeekDetail(date) {
   const el=document.getElementById('week-detail');
   const active=S.employees.filter(e=>e.active!==false);
   if (!active.length) {
-    el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="icon">👥</div>
+    el.innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="icon"></div>
       <h3>Sin empleados</h3><p>Agregá empleados primero.</p>
       <button class="btn btn-primary" onclick="showTab('empleados')">Ir a Empleados</button></div>`;
     return;
@@ -2158,7 +2164,7 @@ function renderWeekDetail(date) {
 
   el.innerHTML=['morning','evening'].map(type=>{
     const plan=getOrInitPlan(date,type);
-    const icon=type==='morning'?'🌅':'🌆';
+    const icon=type==='morning'?'':'';
     const lbl=type==='morning'?'IDA – Búsqueda':'VUELTA – Retorno';
     const hClass=type==='morning'?'morning-h':'evening-h';
     const incCount=active.filter(e=>plan.includes(e.id)).length;
@@ -2168,10 +2174,10 @@ function renderWeekDetail(date) {
       const inc=plan.includes(e.id);
       const noC=!e.lat||!e.lng;
       return `<div class="emp-row">
-        <span class="emp-row-name">${escHtml(e.name)}${noC?'<span class="emp-warn">⚠ sin coords</span>':''}</span>
+        <span class="emp-row-name">${escHtml(e.name)}${noC?'<span class="emp-warn"> sin coords</span>':''}</span>
         <button class="tog-btn ${inc?'tog-on':'tog-off'}"
           onclick="toggleWeekEmp('${date}','${type}','${e.id}')">
-          ${inc?'✓ Va':'✗ No va'}
+          ${inc?' Va':' No va'}
         </button>
       </div>`;
     }).join('');
@@ -2187,8 +2193,8 @@ function renderWeekDetail(date) {
           onclick="generateFromWeek('${date}','${type}')">▶ Generar rutas</button>
         <button class="btn btn-ghost btn-sm" onclick="selectAllWeek('${date}','${type}',true)">Todos</button>
         <button class="btn btn-ghost btn-sm" onclick="selectAllWeek('${date}','${type}',false)">Ninguno</button>
-        ${hasRoutes?`<span class="trip-generated">✓ Generado</span>
-        <button class="btn btn-whatsapp btn-sm" onclick="openShareWeekDay('${date}','${type}')">📤 Compartir</button>`
+        ${hasRoutes?`<span class="trip-generated"> Generado</span>
+        <button class="btn btn-whatsapp btn-sm" onclick="openShareWeekDay('${date}','${type}')">Compartir</button>`
         :''}
       </div>
     </div>`;
@@ -2236,7 +2242,7 @@ function downloadTemplate(type) {
     filename='plantilla_vehiculos.xlsx';
   }
   XLSX.writeFile(wb,filename);
-  toast(`✅ Plantilla descargada`);
+  toast(` Plantilla descargada`);
 }
 
 function importFile(input, type) {
@@ -2272,7 +2278,7 @@ function processEmpRows(rows) {
     added++;
   }
   save(); renderEmployees(); renderAttendance();
-  toast(`✅ ${added} empleados importados. Geocodificá sus direcciones.`);
+  toast(` ${added} empleados importados. Geocodificá sus direcciones.`);
 }
 
 function processVehRows(rows) {
@@ -2288,7 +2294,7 @@ function processVehRows(rows) {
     added++;
   }
   save(); renderVehicles();
-  toast(`✅ ${added} vehículos importados`);
+  toast(` ${added} vehículos importados`);
 }
 
 // ═══════════════════════════════════════════════
@@ -2306,7 +2312,7 @@ function renderEmployees() {
     return `<tr>
       <td><strong>${escHtml(e.name)}</strong>${e.phone?`<br><small style="color:var(--muted)">${escHtml(e.phone)}</small>`:''}${defSh?`<br><span style="display:inline-flex;align-items:center;gap:3px;color:#fff;background:${defSh.color};padding:1px 8px;border-radius:9999px;margin-top:3px;font-size:10px;font-weight:700">${escHtml(defSh.name)}</span>`:''}</td>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">${escHtml(e.address||'—')}</td>
-      <td>${e.lat?`<span class="badge badge-green">✓ ${(+e.lat).toFixed(3)}, ${(+e.lng).toFixed(3)}</span>`:'<span class="badge badge-amber">Sin coords</span>'}</td>
+      <td>${e.lat?`<span class="badge badge-green"> ${(+e.lat).toFixed(3)}, ${(+e.lng).toFixed(3)}</span>`:'<span class="badge badge-amber">Sin coords</span>'}</td>
       <td>${e.active!==false?'<span class="badge badge-green">Activo</span>':'<span class="badge badge-red">Inactivo</span>'}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-ghost btn-sm" onclick="openEmpModal('${e.id}')">Editar</button>
@@ -2336,7 +2342,7 @@ function openEmpModal(id) {
       shiftSel.value=e.defaultShiftId||'';
       if (e.lat) {
         btn.dataset.lat=e.lat; btn.dataset.lng=e.lng;
-        document.getElementById('emp-geo-result').innerHTML=`<span style="color:var(--green)">✅ ${(+e.lat).toFixed(4)}, ${(+e.lng).toFixed(4)}</span>`;
+        document.getElementById('emp-geo-result').innerHTML=`<span style="color:var(--green)"> ${(+e.lat).toFixed(4)}, ${(+e.lng).toFixed(4)}</span>`;
         openModal('emp-modal');
         setTimeout(()=>showEmpMap(e.lat, e.lng), 80);
         return;
@@ -2369,7 +2375,7 @@ function saveEmployee() {
     S.employees.push({id:uid(),name,address:addr,phone,active,lat,lng,defaultShiftId});
   }
   save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
-  toast(editEmpId?'✅ Empleado actualizado':'✅ Empleado agregado');
+  toast(editEmpId?' Empleado actualizado':' Empleado agregado');
 }
 function deleteEmployee(id) {
   if (!confirm('¿Eliminar este empleado?')) return;
@@ -2389,9 +2395,9 @@ function renderVehicles() {
   grid.innerHTML=S.vehicles.map((v,i)=>`
     <div class="v-card" style="border-left-color:${COLORS[i%COLORS.length]}">
       <h3>${escHtml(v.name)}</h3>
-      <p>👤 ${escHtml(v.driver||'Sin conductor')}</p>
-      <p>🪑 Capacidad: ${v.capacity} pasajeros</p>
-      ${v.phone?`<p>📞 ${escHtml(v.phone)}</p>`:''}
+      <p> ${escHtml(v.driver||'Sin conductor')}</p>
+      <p> Capacidad: ${v.capacity} pasajeros</p>
+      ${v.phone?`<p> ${escHtml(v.phone)}</p>`:''}
       <div class="v-card-actions">
         <button class="btn btn-ghost btn-sm" onclick="openVehModal('${v.id}')">Editar</button>
         <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${v.id}')">Eliminar</button>
@@ -2430,7 +2436,7 @@ function saveVehicle() {
     S.vehicles.push({id:uid(),name,driver,capacity,phone});
   }
   save(); closeModal('veh-modal'); renderVehicles();
-  toast(editVehId?'✅ Vehículo actualizado':'✅ Vehículo agregado');
+  toast(editVehId?' Vehículo actualizado':' Vehículo agregado');
 }
 function deleteVehicle(id) {
   if (!confirm('¿Eliminar este vehículo?')) return;
@@ -2446,7 +2452,7 @@ function loadConfig() {
   document.getElementById('cfg-addr').value=S.factory.address||'';
   document.getElementById('cfg-city').value=S.city||'';
   document.getElementById('cfg-speed').value=S.speed||40;
-  if (S.factory.lat) document.getElementById('cfg-coords').textContent=`📍 ${(+S.factory.lat).toFixed(5)}, ${(+S.factory.lng).toFixed(5)}`;
+  if (S.factory.lat) document.getElementById('cfg-coords').textContent=` ${(+S.factory.lat).toFixed(5)}, ${(+S.factory.lng).toFixed(5)}`;
   setTimeout(()=>{ initCfgMap(); cfgMap&&cfgMap.invalidateSize(); },100);
   renderShiftsConfig();
 }
@@ -2629,7 +2635,7 @@ async function confirmAddEmp() {
     // Insert before factory stop (morning) or after factory (evening)
     const fIdx = route.stops.findIndex(s => s.isFactory);
     if (fIdx !== -1) route.stops.splice(fIdx, 0, {...emp, isFactory:false});
-    else             route.stops.push({...emp, isFactory:false});
+    else route.stops.push({...emp, isFactory:false});
   }
 
   route.geometry = null;
@@ -2667,7 +2673,7 @@ function openEditPresetModal(id) {
          ${escHtml(e.name)}
        </label>`).join('');
     return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px">
-      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px">🚗 ${escHtml(vehName)}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px"> ${escHtml(vehName)}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${boxes}</div>
     </div>`;
   }).join('');
@@ -2807,7 +2813,7 @@ async function confirmAddRoute() {
   save();
   renderRouteCards(routes, type);
   renderMapRoutes(routes, type);
-  toast(`✅ Remis agregado — ${emps.length} empleado(s)`);
+  toast(`Remis agregado — ${emps.length} empleado(s)`);
 }
 
 // ═══════════════════════════════════════════════
@@ -2831,7 +2837,7 @@ function addToHistory(date, type, routes) {
   // Si ya existe la misma fecha+tipo+turno, reemplazar
   const idx = S.history.findIndex(h=>h.date===date&&h.type===type&&h.shiftId===entry.shiftId);
   if (idx !== -1) S.history.splice(idx, 1, entry);
-  else            S.history.unshift(entry);
+  else S.history.unshift(entry);
   if (S.history.length > 60) S.history = S.history.slice(0, 60);
 }
 
@@ -2878,7 +2884,7 @@ function confirmSavePreset() {
     createdAt: new Date().toISOString().split('T')[0], groups});
   _presetHistSrcId = null;
   save(); closeModal('preset-save-modal');
-  toast(`✅ Plantilla "${name}" guardada`);
+  toast(` Plantilla "${name}" guardada`);
   if (document.getElementById('tab-historial').classList.contains('active')) renderPresetsSection();
 }
 
@@ -2892,7 +2898,7 @@ function openApplyModal(id, isPreset) {
   _applySourceId = id; _applyIsPreset = isPreset;
   const src = isPreset ? S.routePresets.find(p=>p.id===id) : S.history.find(h=>h.id===id);
   if (!src) return;
-  const typeLabel = src.type==='morning'?'🌅 IDA':'🌆 VUELTA';
+  const typeLabel = src.type==='morning'?' IDA':' VUELTA';
   const sh = S.shifts.find(s=>s.id===src.shiftId);
   document.getElementById('apply-modal-title').textContent =
     isPreset ? `Aplicar plantilla: ${src.name}` : `Reutilizar config – ${src.date} · ${typeLabel}${sh?' · '+sh.name:''}`;
@@ -2932,7 +2938,7 @@ async function confirmApplyPreset() {
   const routes  = [];
   for (const g of src.groups) {
     const veh = S.vehicles.find(v=>v.id===g.vehicleId);
-    if (!veh) { toast(`⚠️ Vehículo "${g.vehicleName}" ya no existe`); continue; }
+    if (!veh) { toast(` Vehículo "${g.vehicleName}" ya no existe`); continue; }
     const empObjs = g.empIds.map(id=>S.employees.find(e=>e.id===id)).filter(e=>e&&e.lat&&e.lng);
     if (!empObjs.length) continue;
     const stops = type==='morning'
@@ -2956,7 +2962,7 @@ async function confirmApplyPreset() {
   showTab('hoy'); renderShiftBar(); renderAttendance();
   renderRouteCards(routes, type); renderMapRoutes(routes, type);
   hoyTab(type==='morning'?'ida':'vuelta');
-  toast(`✅ Aplicado — ${routes.length} remis`);
+  toast(` Aplicado — ${routes.length} remis`);
 }
 
 // ═══════════════════════════════════════════════
@@ -2970,12 +2976,12 @@ function renderHistorialTab() {
 function renderPresetsSection() {
   const el = document.getElementById('presets-list'); if (!el) return;
   if (!S.routePresets.length) {
-    el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:10px 0">No hay plantillas guardadas. Generá rutas y usá el botón "💾 Guardar como plantilla".</p>';
+    el.innerHTML='<p style="font-size:13px;color:var(--muted);padding:10px 0">No hay plantillas guardadas. Generá rutas y usá el botón "Guardar como plantilla".</p>';
     return;
   }
   el.innerHTML = S.routePresets.map(p => {
     const sh    = S.shifts.find(s=>s.id===p.shiftId);
-    const lbl   = p.type==='morning'?'🌅 IDA':'🌆 VUELTA';
+    const lbl   = p.type==='morning'?' IDA':' VUELTA';
     const total = p.groups.reduce((s,g)=>s+g.empIds.length,0);
     return `<div class="hist-item">
       <div style="flex:1;min-width:0">
@@ -2984,9 +2990,9 @@ function renderPresetsSection() {
         <div class="hist-item-detail">${p.groups.map(g=>`${escHtml(g.vehicleName)}: ${g.empNames.slice(0,3).map(n=>n.split(' ')[0]).join(', ')}${g.empNames.length>3?'…':''}`).join(' | ')}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:flex-start;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="openApplyModal('${p.id}',true)">▶ Aplicar</button>
-        <button class="btn btn-ghost btn-sm" onclick="openEditPresetModal('${p.id}')" title="Editar plantilla">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deletePreset('${p.id}')">✕</button>
+        <button class="btn btn-primary btn-sm" onclick="openApplyModal('${p.id}',true)">Aplicar</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditPresetModal('${p.id}')" title="Editar plantilla">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="deletePreset('${p.id}')">Eliminar</button>
       </div>
     </div>`;
   }).join('');
@@ -3006,7 +3012,7 @@ function renderHistorySection() {
     const dateStr = `${+d}/${+m}/${y}`;
     const rows = entries.map(h => {
       const sh    = S.shifts.find(s=>s.id===h.shiftId);
-      const lbl   = h.type==='morning'?'🌅 IDA':'🌆 VUELTA';
+      const lbl   = h.type==='morning'?' IDA':' VUELTA';
       const total = h.groups.reduce((s,g)=>s+g.empIds.length,0);
       const time  = new Date(h.savedAt).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
       return `<div class="hist-item">
@@ -3016,12 +3022,12 @@ function renderHistorySection() {
           <div class="hist-item-detail">${h.groups.map(g=>`${escHtml(g.vehicleName)}: ${g.empNames.slice(0,3).map(n=>n.split(' ')[0]).join(', ')}${g.empNames.length>3?'…':''}`).join(' | ')}</div>
         </div>
         <div style="display:flex;gap:5px;flex-shrink:0;align-items:flex-start">
-          <button class="btn btn-outline btn-sm" onclick="openApplyModal('${h.id}',false)">↩ Reutilizar</button>
-          <button class="btn btn-ghost btn-sm" title="Guardar como plantilla" onclick="openSavePresetModal('${h.type}','${h.id}')">💾</button>
+          <button class="btn btn-outline btn-sm" onclick="openApplyModal('${h.id}',false)">Reutilizar</button>
+          <button class="btn btn-ghost btn-sm" title="Guardar como plantilla" onclick="openSavePresetModal('${h.type}','${h.id}')">Guardar</button>
         </div>
       </div>`;
     }).join('');
-    return `<div class="hist-date-group"><div class="hist-date-label">📅 ${dateStr}</div>${rows}</div>`;
+    return `<div class="hist-date-group"><div class="hist-date-label"> ${dateStr}</div>${rows}</div>`;
   }).join('');
 }
 
@@ -3258,7 +3264,7 @@ function _buildXLSXSheet(rows) {
     // Section separator
     if (sk !== curSection) {
       curSection = sk; curVehicle = null; vColorIdx = -1;
-      const dir = row[5] === 'IDA' ? '🌅 IDA (Búsqueda)' : '🌆 VUELTA (Retorno)';
+      const dir = row[5] === 'IDA' ? ' IDA (Búsqueda)' : ' VUELTA (Retorno)';
       addMerge(`  ${row[1]}  ${row[0]}     •     ${dir}     •     Turno: ${row[2]}  •  Entrada: ${row[3]} hs`, _xs('section'));
     }
 
@@ -3266,11 +3272,11 @@ function _buildXLSXSheet(rows) {
     if (vk !== curVehicle) {
       curVehicle = vk; vColorIdx = (vColorIdx + 1) % XLSX_VEH_COLORS.length; empSeq = 0;
       const st = vStats[vk];
-      const parts = [`🚗  ${row[6]}`];
-      if (row[7]) parts.push(`👤 ${row[7]}`);
-      if (row[9]) parts.push(`🚐 Salida: ${row[9]} hs`);
-      parts.push(`👥 ${st.n} pasajero${st.n!==1?'s':''}`);
-      if (st.km) parts.push(`📏 ${st.km} km  ·  ~${st.min} min`);
+      const parts = [`  ${row[6]}`];
+      if (row[7]) parts.push(` ${row[7]}`);
+      if (row[9]) parts.push(` Salida: ${row[9]} hs`);
+      parts.push(` ${st.n} pasajero${st.n!==1?'s':''}`);
+      if (st.km) parts.push(` ${st.km} km  ·  ~${st.min} min`);
       addMerge('     ' + parts.join('     '), _xs('vehicle', XLSX_VEH_COLORS[vColorIdx]));
     }
 
@@ -3297,7 +3303,7 @@ function _buildXLSXSheet(rows) {
 }
 
 function _downloadXLSXStyled(filename, rows, isWeekly) {
-  if (typeof XLSX === 'undefined') { toast('⚠️ Librería Excel no disponible — usá CSV'); return; }
+  if (typeof XLSX === 'undefined') { toast('Librería Excel no disponible — usá CSV'); return; }
   const wb = XLSX.utils.book_new();
 
   if (isWeekly) {
@@ -3318,7 +3324,7 @@ function _downloadXLSXStyled(filename, rows, isWeekly) {
   }
 
   XLSX.writeFile(wb, filename + '.xlsx');
-  toast('📊 Excel descargado');
+  toast('Excel descargado');
 }
 
 function _downloadCSV(filename, rows) {
@@ -3330,7 +3336,7 @@ function _downloadCSV(filename, rows) {
   };
   const csv = BOM + [EXPORT_HEADERS, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
   _triggerDownload(new Blob([csv], {type:'text/csv;charset=utf-8'}), filename + '.csv');
-  toast('📊 CSV descargado — abrilo con Excel o Google Sheets');
+  toast('CSV descargado — abrilo con Excel o Google Sheets');
 }
 
 function _downloadHTMLTable(filename, rows, title) {
@@ -3349,13 +3355,13 @@ function _downloadHTMLTable(filename, rows, title) {
     td{padding:6px 10px;border-bottom:1px solid #e2e8f0;white-space:nowrap}
     @media print{body{padding:0}button{display:none}}
   </style></head><body>
-  <h1>📊 ${title}</h1>
+  <h1> ${title}</h1>
   <p style="color:#64748b;margin-bottom:12px">Exportado: ${new Date().toLocaleString('es-AR')} · ${rows.length} registros</p>
   <table><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>
-  <br><button onclick="window.print()" style="padding:8px 16px;background:#1e293b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">🖨 Imprimir</button>
+  <br><button onclick="window.print()" style="padding:8px 16px;background:#1e293b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">Imprimir</button>
   </body></html>`;
   _triggerDownload(new Blob([html], {type:'text/html;charset=utf-8'}), filename + '.html');
-  toast('🌐 Tabla HTML descargada');
+  toast('Tabla HTML descargada');
 }
 
 function _triggerDownload(blob, filename) {
@@ -3399,7 +3405,7 @@ function initFirebase() {
   } catch(e) {
     console.warn('Firebase init error:', e);
     loginScreen.classList.remove('open');
-    toast('⚠️ Error al iniciar Firebase');
+    toast('Error al iniciar Firebase');
   }
 }
 
@@ -3524,7 +3530,7 @@ function renderShiftsConfig() {
       <div class="shift-item-name">${escHtml(sh.name)}</div>
       <div class="shift-item-time">${sh.start} – ${sh.end}</div>
       <button class="btn btn-ghost btn-sm" onclick="openEditShiftModal('${sh.id}')">Editar</button>
-      ${S.shifts.length>1?`<button class="btn btn-danger btn-sm" onclick="deleteShift('${sh.id}')">✕</button>`:''}
+      ${S.shifts.length>1?`<button class="btn btn-danger btn-sm" onclick="deleteShift('${sh.id}')">Eliminar</button>`:''}
     </div>`).join('');
 }
 
@@ -3600,7 +3606,7 @@ function init() {
   const toolbar=document.querySelector('#tab-empleados .toolbar');
   const gBtn=document.createElement('button');
   gBtn.className='btn btn-ghost';
-  gBtn.textContent='🌐 Geocodificar faltantes';
+  gBtn.textContent=' Geocodificar faltantes';
   gBtn.onclick=geocodeAllMissing;
   toolbar.appendChild(gBtn);
 

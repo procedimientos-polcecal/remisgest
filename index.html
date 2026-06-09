@@ -3038,7 +3038,7 @@ let _exportScope = 'day';
 let _exportFmt   = 'csv';
 
 const EXPORT_HEADERS = [
-  'Fecha','Turno','Busqueda','Tipo','Remis','Conductor','#','Empleado','Dirección','Km','Min'
+  'Fecha','Turno','Busqueda','Tipo','Remis','Conductor','#','Empleado','Dirección'
 ];
 
 function openExportModal() {
@@ -3101,9 +3101,7 @@ function _buildDayRows(date) {
             r.vehicle.driver || '', // 5 Conductor
             si + 1,              // 6 #
             s.name,              // 7 Empleado
-            s.address || '',     // 8 Dirección
-            r.km,                // 9 Km
-            r.min                // 10 Min
+            s.address || ''      // 8 Dirección
           ]);
         });
       });
@@ -3145,9 +3143,7 @@ function _buildHistRows() {
           veh?.driver || '',         // 5 Conductor
           si + 1,                    // 6 #
           g.empNames[si] || empId,   // 7 Empleado
-          emp?.address || '',        // 8 Dirección
-          '',                        // 9 Km
-          ''                         // 10 Min
+          emp?.address || ''         // 8 Dirección
         ]);
       });
     });
@@ -3222,12 +3218,12 @@ function _buildXLSXSheet(rows) {
       alignment: { horizontal: 'left', vertical: 'center' },
       border: hairBorder
     };
-    wsData.push(row.map((v, ci) => mk(ci >= 9 ? (v === '' ? '' : +v || v) : v, dStyle)));
+    wsData.push(row.map(v => mk(v, dStyle)));
   });
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [
-    {wch:12},{wch:12},{wch:7},{wch:8},{wch:18},{wch:18},{wch:4},{wch:26},{wch:32},{wch:6},{wch:6}
+    {wch:12},{wch:12},{wch:7},{wch:8},{wch:18},{wch:18},{wch:4},{wch:26},{wch:36}
   ];
   ws['!rows'] = wsData.map((_, i) => ({ hpt: i === 0 ? 18 : 15 }));
   ws['!views'] = [{ state:'frozen', ySplit:1, topLeftCell:'A2' }];

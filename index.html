@@ -3310,7 +3310,9 @@ function _triggerDownload(blob, filename) {
 function initFirebase() {
   if (!FB_ENABLED) return; // modo local sin login
   const loginScreen = document.getElementById('login-screen');
-  loginScreen.classList.add('open');
+  // No mostramos el login todavía — esperamos a que Firebase confirme el estado.
+  // Si ya hay sesión guardada, onAuthStateChanged la restaura en < 300 ms y
+  // el usuario entra directo sin ver la pantalla de login.
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     fbAuth = firebase.auth();
@@ -3329,6 +3331,7 @@ function initFirebase() {
         renderShiftBar(); renderWeekShiftBar();
         renderAttendance(); renderEmployees(); renderVehicles(); loadSavedRoutes();
       } else {
+        // Confirmado: no hay sesión activa → mostrar login
         fbUser = null;
         loginScreen.classList.add('open');
         const logoutBtn = document.getElementById('fb-logout-btn');

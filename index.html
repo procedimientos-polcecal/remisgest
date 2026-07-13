@@ -905,6 +905,23 @@ tbody tr:hover td{background:var(--blue-l)}
       <label>Nombre completo</label>
       <input class="form-control" id="emp-name" placeholder="Ej: Juan García">
     </div>
+    <!-- Acceso a la app — visible inmediatamente -->
+    <div style="background:var(--blue-l);border:1px solid var(--blue-ll);border-radius:var(--r-md);padding:12px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--blue-d);margin-bottom:10px">Acceso a la app (opcional)</div>
+      <div style="display:grid;gap:8px">
+        <input class="form-control" id="emp-email" type="email" placeholder="Email: empleado@gmail.com">
+        <div style="position:relative">
+          <input class="form-control" id="emp-password" type="password" placeholder="Contraseña" style="padding-right:44px">
+          <button type="button" onclick="toggleEmpPwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1">👁</button>
+        </div>
+        <div id="emp-reset-wrap" style="display:none">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="sendEmpPasswordReset()" style="width:100%;font-size:12px">
+            Enviar link de acceso al email
+          </button>
+        </div>
+        <small id="emp-auth-hint" style="color:var(--blue-d);font-size:11px">Nuevo empleado: ingresá email y contraseña para darle acceso.</small>
+      </div>
+    </div>
     <div class="form-group">
       <label>Dirección</label>
       <div class="form-row">
@@ -925,30 +942,12 @@ tbody tr:hover td{background:var(--blue-l)}
       <label>Teléfono (opcional)</label>
       <input class="form-control" id="emp-phone" placeholder="Ej: 351-555-1234">
     </div>
-    <div class="form-group" id="emp-auth-section">
-      <label>Acceso a la app (opcional)</label>
-      <input class="form-control" id="emp-email" type="email" placeholder="empleado@gmail.com" style="margin-bottom:8px">
-      <div id="emp-password-wrap">
-        <div style="position:relative">
-          <input class="form-control" id="emp-password" type="password" placeholder="Contraseña inicial" style="padding-right:40px">
-          <button type="button" onclick="toggleEmpPwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;font-size:14px" title="Mostrar/ocultar">👁</button>
-        </div>
-      </div>
-      <div id="emp-reset-wrap" style="display:none">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="sendEmpPasswordReset()" style="width:100%">Enviar email para resetear contraseña</button>
-      </div>
-      <small style="color:var(--muted);font-size:11px;margin-top:6px;display:block">
-        El empleado usará este email y contraseña para ingresar a la app.
-      </small>
-    </div>
     <div class="form-group">
       <label>Turno habitual</label>
       <select class="form-control" id="emp-default-shift">
         <option value="">— Sin turno fijo —</option>
       </select>
-      <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">
-        Pre-marca asistencia automáticamente en ese turno cada día.
-      </small>
+      <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">Pre-marca asistencia automáticamente en ese turno cada día.</small>
     </div>
     <div class="form-group" style="display:flex;align-items:center;gap:8px">
       <input type="checkbox" id="emp-active" checked style="width:16px;height:16px">
@@ -2457,10 +2456,12 @@ function openEmpModal(id) {
   const shiftSel=document.getElementById('emp-default-shift');
   shiftSel.innerHTML=`<option value="">— Sin turno fijo —</option>`+
     S.shifts.map(sh=>`<option value="${sh.id}">${escHtml(sh.name)} (${sh.start}–${sh.end})</option>`).join('');
-  // Modo nuevo: mostrar campo contraseña; modo edición: mostrar botón reset
-  document.getElementById('emp-password-wrap').style.display = id ? 'none' : '';
-  document.getElementById('emp-reset-wrap').style.display   = id ? ''     : 'none';
   document.getElementById('emp-password').value = '';
+  // Edición: mostrar botón reset; nuevo: ocultarlo
+  document.getElementById('emp-reset-wrap').style.display = id ? '' : 'none';
+  document.getElementById('emp-auth-hint').textContent = id
+    ? 'Ingresá una nueva contraseña para cambiarla, o dejá en blanco para no modificarla.'
+    : 'Nuevo empleado: ingresá email y contraseña para darle acceso.';
   if (id) {
     const e=S.employees.find(x=>x.id===id);
     if (e) {
@@ -2511,6 +2512,15 @@ function saveEmployee() {
       if(FB_ENABLED&&fbDb&&fbUser) {
         if(oldEmail&&oldEmail!==email) fbDb.collection('empAccounts').doc(oldEmail).delete();
         if(email) fbDb.collection('empAccounts').doc(email).set({adminUid:fbUser.uid,empId:editEmpId,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      }
+      // Si ingresó contraseña nueva, crear/actualizar cuenta Auth
+      if(FB_ENABLED&&fbUser&&email&&password) {
+        if(password.length<6){ toast('La contraseña debe tener al menos 6 caracteres'); return; }
+        createEmpAuthAccount(email, password, editEmpId).catch(err=>{
+          if(err.code==='auth/email-already-in-use')
+            toast('Datos guardados. La contraseña no se cambió porque ya existe una cuenta — usá "Enviar link de acceso".');
+          else toast('Datos guardados. Error al actualizar contraseña: '+err.message);
+        });
       }
     }
     save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
@@ -2570,8 +2580,15 @@ async function sendEmpPasswordReset() {
   if(!email){ toast('Ingresá el email del empleado'); return; }
   try {
     await fbAuth.sendPasswordResetEmail(email);
-    toast('Email de reseteo enviado a '+email);
-  } catch(e) { toast('Error: '+e.message); }
+    toast('Link de acceso enviado a ' + email);
+  } catch(e) {
+    if(e.code === 'auth/user-not-found') {
+      toast('Ese email no tiene cuenta aún. Ingresá una contraseña para crearla.');
+      document.getElementById('emp-password').focus();
+    } else {
+      toast('Error: ' + e.message);
+    }
+  }
 }
 function deleteEmployee(id) {
   if (!confirm('¿Eliminar este empleado?')) return;

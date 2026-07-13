@@ -697,7 +697,7 @@ tbody tr:hover td{background:var(--blue-l)}
   </div>
 </div>
 
-<header>
+<header id="main-header">
   <div class="logo-wrap">
     <img src="./logo-pp.png" alt="Logo" style="height:36px;width:36px;object-fit:contain" onerror="this.parentElement.textContent='RM'">
   </div>
@@ -920,11 +920,20 @@ tbody tr:hover td{background:var(--blue-l)}
       <label>Teléfono (opcional)</label>
       <input class="form-control" id="emp-phone" placeholder="Ej: 351-555-1234">
     </div>
-    <div class="form-group">
-      <label>Email para notificaciones (opcional)</label>
-      <input class="form-control" id="emp-email" type="email" placeholder="empleado@gmail.com">
-      <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">
-        El empleado usará este email para ingresar a la app y recibir notificaciones.
+    <div class="form-group" id="emp-auth-section">
+      <label>Acceso a la app (opcional)</label>
+      <input class="form-control" id="emp-email" type="email" placeholder="empleado@gmail.com" style="margin-bottom:8px">
+      <div id="emp-password-wrap">
+        <div style="position:relative">
+          <input class="form-control" id="emp-password" type="password" placeholder="Contraseña inicial" style="padding-right:40px">
+          <button type="button" onclick="toggleEmpPwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;font-size:14px" title="Mostrar/ocultar">👁</button>
+        </div>
+      </div>
+      <div id="emp-reset-wrap" style="display:none">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="sendEmpPasswordReset()" style="width:100%">Enviar email para resetear contraseña</button>
+      </div>
+      <small style="color:var(--muted);font-size:11px;margin-top:6px;display:block">
+        El empleado usará este email y contraseña para ingresar a la app.
       </small>
     </div>
     <div class="form-group">
@@ -2443,6 +2452,10 @@ function openEmpModal(id) {
   const shiftSel=document.getElementById('emp-default-shift');
   shiftSel.innerHTML=`<option value="">— Sin turno fijo —</option>`+
     S.shifts.map(sh=>`<option value="${sh.id}">${escHtml(sh.name)} (${sh.start}–${sh.end})</option>`).join('');
+  // Modo nuevo: mostrar campo contraseña; modo edición: mostrar botón reset
+  document.getElementById('emp-password-wrap').style.display = id ? 'none' : '';
+  document.getElementById('emp-reset-wrap').style.display   = id ? ''     : 'none';
+  document.getElementById('emp-password').value = '';
   if (id) {
     const e=S.employees.find(x=>x.id===id);
     if (e) {
@@ -2481,6 +2494,7 @@ function saveEmployee() {
   const btn=document.getElementById('emp-geo-btn');
   const lat=btn.dataset.lat?+btn.dataset.lat:null;
   const lng=btn.dataset.lng?+btn.dataset.lng:null;
+  const password = document.getElementById('emp-password').value;
   if (!name) { toast('Ingresá el nombre'); return; }
   if (editEmpId) {
     const e=S.employees.find(x=>x.id===editEmpId);
@@ -2494,14 +2508,65 @@ function saveEmployee() {
         if(email) fbDb.collection('empAccounts').doc(email).set({adminUid:fbUser.uid,empId:editEmpId,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
       }
     }
+    save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
+    toast('Empleado actualizado');
   } else {
     const newId=uid();
     S.employees.push({id:newId,name,address:addr,phone,email,active,lat,lng,defaultShiftId});
-    if(FB_ENABLED&&fbDb&&fbUser&&email)
-      fbDb.collection('empAccounts').doc(email).set({adminUid:fbUser.uid,empId:newId,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    // Si tiene email y contraseña, crear cuenta Firebase Auth sin cerrar sesión admin
+    if(FB_ENABLED&&fbUser&&email&&password) {
+      if(password.length<6){ toast('La contraseña debe tener al menos 6 caracteres'); S.employees.pop(); return; }
+      createEmpAuthAccount(email, password, newId).then(()=>{
+        save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
+        toast('Empleado agregado con acceso a la app');
+      }).catch(err=>{
+        S.employees.pop();
+        const msg = err.code==='auth/email-already-in-use'
+          ? 'Ese email ya tiene cuenta. Editá el empleado para resetear la contraseña.'
+          : 'Error al crear cuenta: '+err.message;
+        toast(msg);
+      });
+    } else {
+      if(FB_ENABLED&&fbDb&&fbUser&&email)
+        fbDb.collection('empAccounts').doc(email).set({adminUid:fbUser.uid,empId:newId,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
+      toast('Empleado agregado');
+    }
   }
-  save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
-  toast(editEmpId?'Empleado actualizado':'Empleado agregado');
+}
+
+async function createEmpAuthAccount(email, password, empId) {
+  // Crear cuenta en app secundaria para no cerrar sesión del admin
+  const secondApp = firebase.initializeApp(FIREBASE_CONFIG, 'emp-' + Date.now());
+  try {
+    const secondAuth = secondApp.auth();
+    const cred = await secondAuth.createUserWithEmailAndPassword(email, password);
+    const empUid = cred.user.uid;
+    await secondAuth.signOut();
+    // Registrar en Firestore
+    if(fbDb&&fbUser) {
+      await fbDb.collection('empAccounts').doc(email).set({
+        adminUid:fbUser.uid, empId, uid:empUid,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  } finally {
+    secondApp.delete();
+  }
+}
+
+function toggleEmpPwd() {
+  const inp = document.getElementById('emp-password');
+  inp.type = inp.type==='password' ? 'text' : 'password';
+}
+
+async function sendEmpPasswordReset() {
+  const email = document.getElementById('emp-email').value.trim();
+  if(!email){ toast('Ingresá el email del empleado'); return; }
+  try {
+    await fbAuth.sendPasswordResetEmail(email);
+    toast('Email de reseteo enviado a '+email);
+  } catch(e) { toast('Error: '+e.message); }
 }
 function deleteEmployee(id) {
   if (!confirm('¿Eliminar este empleado?')) return;
@@ -3458,7 +3523,11 @@ function initFirebase() {
           _empMode = true;
           const { adminUid, empId } = empSnap.data();
           _empAdminUid = adminUid; _empEmpId = empId;
-          // Registrar UID para que el Cloud Function pueda enviarle notificaciones
+          // Ocultar toda la interfaz del admin
+          document.getElementById('main-header').style.display = 'none';
+          document.getElementById('main-nav').style.display = 'none';
+          document.querySelectorAll('.tab').forEach(t => t.style.display = 'none');
+          // Registrar UID para notificaciones
           fbDb.collection('empAccounts').doc(user.email.toLowerCase()).set(
             { uid: user.uid }, { merge: true }
           );
@@ -3522,13 +3591,16 @@ async function doLogin() {
 
 async function doLogout() {
   if (FB_ENABLED && fbAuth) {
-    // Limpiar token FCM antes de cerrar sesión
     if (fbDb && fbUser) {
       try { await fbDb.collection('fcmTokens').doc(fbUser.uid).delete(); } catch(e){}
     }
     await fbAuth.signOut();
   }
+  // Restaurar UI (onAuthStateChanged mostrará el login)
   document.getElementById('employee-screen').style.display = 'none';
+  document.getElementById('main-header').style.display = '';
+  document.getElementById('main-nav').style.display = '';
+  document.querySelectorAll('.tab').forEach(t => t.style.display = '');
 }
 
 // ── FCM: pedir permiso y guardar token ──────────────────────────────────────
@@ -3560,89 +3632,93 @@ function empViewDay(day, btn) {
 async function renderEmployeeView() {
   if (!_empAdminUid || !_empEmpId || !fbDb) return;
   const content = document.getElementById('emp-view-content');
-  content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px 0">Cargando...</p>';
+  content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:48px 0">Cargando...</p>';
 
   try {
     const orgSnap = await fbDb.collection('orgs').doc(_empAdminUid).get();
-    if (!orgSnap.exists) { content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px 0">Sin datos</p>'; return; }
+    if (!orgSnap.exists) { content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:48px 0">Sin datos disponibles</p>'; return; }
     const orgData = JSON.parse(orgSnap.data().state);
     const emp = orgData.employees?.find(e => e.id === _empEmpId);
     if (emp) document.getElementById('emp-view-name').textContent = emp.name;
 
-    // Calcular fecha objetivo
     const today = new Date(); today.setHours(0,0,0,0);
     const target = new Date(today);
     if (_empViewDay === 'tomorrow') target.setDate(target.getDate() + 1);
-    const iso = target.toISOString().split('T')[0]; // YYYY-MM-DD
+    const iso = target.toISOString().split('T')[0];
 
-    // Buscar remises asignados a este empleado en esa fecha
+    // Recolectar remises asignados
     const myRoutes = [];
-    const routesForDay = Object.entries(orgData.routes || {})
-      .filter(([key]) => key.startsWith(iso + '__'));
-
-    for (const [key, routeList] of routesForDay) {
+    for (const [key, routeList] of Object.entries(orgData.routes || {})) {
+      if (!key.startsWith(iso + '__') || !Array.isArray(routeList)) continue;
       const shiftId = key.split('__')[1];
       const shift = orgData.shifts?.find(s => s.id === shiftId);
-      if (!Array.isArray(routeList)) continue;
       for (const route of routeList) {
         if (!Array.isArray(route.seats)) continue;
-        const mySeat = route.seats.find(s => s.empId === _empEmpId);
-        if (mySeat) {
-          myRoutes.push({ shift, route, seat: mySeat });
-        }
+        if (route.seats.find(s => s.empId === _empEmpId))
+          myRoutes.push({ shift, route });
       }
     }
 
     if (!myRoutes.length) {
       const label = _empViewDay === 'tomorrow' ? 'mañana' : 'hoy';
-      content.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--muted)">
-        <div style="font-size:40px;margin-bottom:12px">🚗</div>
-        <div>No tenés remis asignado para ${label}</div>
-      </div>`;
+      content.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;color:var(--muted)">
+          <div style="font-size:48px;margin-bottom:16px">🚗</div>
+          <div style="font-size:15px;font-weight:500">Sin remis asignado para ${label}</div>
+        </div>`;
       return;
     }
 
-    const fmtDate = d => {
-      const [y,m,day] = d.split('-');
-      return `${day}/${m}/${y}`;
-    };
-    const html = myRoutes.map(({shift, route, seat}) => {
-      const passengers = route.seats
-        .filter(s => s.empId)
-        .map(s => {
-          const e = orgData.employees?.find(x => x.id === s.empId);
-          return e ? `<li style="padding:4px 0;border-bottom:1px solid var(--border)">${e.name}${e.address ? ' — <span style="color:var(--muted);font-size:12px">'+e.address+'</span>' : ''}</li>` : '';
-        }).join('');
+    const [y,m,d] = iso.split('-');
+    const dateLabel = `${d}/${m}/${y}`;
+    const DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const dayName = DIAS[target.getDay()];
 
-      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px;margin-bottom:12px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <span style="background:var(--blue-l);color:var(--blue-d);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700">${shift?.name || 'Turno'}</span>
-          <span style="font-size:13px;color:var(--muted)">${fmtDate(iso)}</span>
-        </div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Remis</div>
-          <div style="font-weight:700;font-size:16px">🚗 ${route.vehicle?.name || '—'}</div>
-          ${route.vehicle?.driver ? `<div style="font-size:13px;color:var(--muted)">Conductor: ${route.vehicle.driver}</div>` : ''}
-        </div>
-        ${route.departureTime ? `<div style="margin-bottom:10px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Hora de búsqueda</div>
-          <div style="font-weight:600;font-size:15px">⏰ ${route.departureTime}</div>
-        </div>` : ''}
-        ${seat.address || (orgData.employees?.find(x=>x.id===_empEmpId)?.address) ? `<div style="margin-bottom:10px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Tu dirección</div>
-          <div style="font-size:14px">📍 ${seat.address || orgData.employees?.find(x=>x.id===_empEmpId)?.address || ''}</div>
-        </div>` : ''}
-        ${passengers ? `<div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Pasajeros del remis</div>
-          <ul style="list-style:none;padding:0;margin:0;font-size:13px">${passengers}</ul>
-        </div>` : ''}
-      </div>`;
+    content.innerHTML = myRoutes.map(({shift, route}) => {
+      const others = route.seats
+        .filter(s => s.empId && s.empId !== _empEmpId)
+        .map(s => orgData.employees?.find(x => x.id === s.empId)?.name)
+        .filter(Boolean);
+
+      return `
+        <div style="background:#fff;border-radius:16px;box-shadow:var(--s2);overflow:hidden;margin-bottom:16px">
+          <!-- Cabecera con turno y fecha -->
+          <div style="background:linear-gradient(135deg,#0a1628,#162535);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;opacity:.7">${dayName} ${dateLabel}</div>
+              <div style="font-size:17px;font-weight:700;margin-top:2px">${shift?.name || 'Turno'}</div>
+            </div>
+            ${route.departureTime ? `<div style="text-align:right">
+              <div style="font-size:11px;opacity:.7">Búsqueda</div>
+              <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">${route.departureTime}</div>
+            </div>` : ''}
+          </div>
+          <!-- Cuerpo -->
+          <div style="padding:16px 20px">
+            <div style="display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+              <div style="width:40px;height:40px;border-radius:10px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🚗</div>
+              <div>
+                <div style="font-weight:700;font-size:16px">${route.vehicle?.name || '—'}</div>
+                ${route.vehicle?.driver ? `<div style="font-size:13px;color:var(--muted)">Conductor: ${route.vehicle.driver}</div>` : ''}
+              </div>
+            </div>
+            ${emp?.address ? `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start">
+              <span style="font-size:18px;margin-top:1px">📍</span>
+              <div>
+                <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Tu dirección</div>
+                <div style="font-size:14px;margin-top:2px">${emp.address}</div>
+              </div>
+            </div>` : ''}
+            ${others.length ? `<div style="padding-top:12px">
+              <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Viajan también</div>
+              ${others.map(n=>`<div style="font-size:14px;padding:5px 0;border-bottom:1px solid var(--border-l);color:var(--text-2)">${n}</div>`).join('')}
+            </div>` : ''}
+          </div>
+        </div>`;
     }).join('');
-
-    content.innerHTML = html;
   } catch(e) {
     console.warn('renderEmployeeView error:', e);
-    content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px 0">Error al cargar datos</p>';
+    content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:48px 0">Error al cargar datos</p>';
   }
 }
 

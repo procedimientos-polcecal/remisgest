@@ -22,8 +22,8 @@
 
 /* ─── Design tokens ─── */
 :root{
-  /* Brand palette */
-  --blue:#2563eb;--blue-d:#1d4ed8;--blue-l:#eff6ff;--blue-ll:#dbeafe;
+  /* Brand palette — primario verde (Polcecal/Polysan), azul solo para info */
+  --blue:#16a34a;--blue-d:#15803d;--blue-l:#f0fdf4;--blue-ll:#dcfce7;
   --green:#059669;--green-d:#047857;--green-l:#ecfdf5;--green-ll:#d1fae5;
   --amber:#d97706;--amber-d:#b45309;--amber-l:#fffbeb;--amber-ll:#fef3c7;
   --red:#dc2626;--red-l:#fef2f2;--red-ll:#fee2e2;
@@ -52,18 +52,18 @@ body{
 
 /* ─── Header ─── */
 header{
-  background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 50%,#2563eb 100%);
+  background:linear-gradient(135deg,#0a1628 0%,#0d1f2d 60%,#162535 100%);
   color:#fff;height:60px;
   display:flex;align-items:center;gap:14px;padding:0 24px;
-  box-shadow:0 2px 16px rgba(30,58,138,.4);
+  box-shadow:0 2px 16px rgba(10,22,40,.55);
   position:sticky;top:0;z-index:200;
 }
 .logo-wrap{
-  width:38px;height:38px;border-radius:10px;
-  background:rgba(255,255,255,.15);
+  width:44px;height:44px;border-radius:10px;
+  background:rgba(255,255,255,.1);
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;font-size:20px;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);
+  overflow:hidden;
 }
 header h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
 header .sub{font-size:11px;color:rgba(255,255,255,.6);margin-left:auto;white-space:nowrap}
@@ -119,7 +119,7 @@ nav button.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:
   border-radius:var(--r-sm);font-size:13px;color:var(--text);
   background:#fff;transition:border-color .15s,box-shadow .15s;
 }
-.date-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.date-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
 
 /* ─── Pill tabs ─── */
 .pill-tabs{
@@ -158,8 +158,8 @@ nav button.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:
 }
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
-.btn-primary{background:var(--blue);color:#fff;box-shadow:0 1px 4px rgba(37,99,235,.3)}
-.btn-primary:hover{background:var(--blue-d);box-shadow:0 3px 10px rgba(37,99,235,.4)}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 1px 4px rgba(22,163,74,.3)}
+.btn-primary:hover{background:var(--blue-d);box-shadow:0 3px 10px rgba(22,163,74,.4)}
 .btn-success{background:var(--green);color:#fff;box-shadow:0 1px 4px rgba(5,150,105,.3)}
 .btn-success:hover{background:var(--green-d)}
 .btn-amber{background:var(--amber);color:#fff}
@@ -365,7 +365,7 @@ tbody tr:hover td{background:var(--blue-l)}
   border-radius:var(--r-sm);font-size:13px;color:var(--text);
   background:#fff;transition:border-color .15s,box-shadow .15s;
 }
-.form-control:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.form-control:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
 .form-row{display:grid;grid-template-columns:1fr auto;gap:8px}
 .modal-footer{
   display:flex;gap:8px;justify-content:flex-end;
@@ -387,7 +387,7 @@ tbody tr:hover td{background:var(--blue-l)}
   border:1.5px solid var(--border);border-radius:var(--r-sm);font-size:13px;
   transition:border-color .15s,box-shadow .15s;
 }
-.search:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.search:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
 
 /* ─── Empty state ─── */
 .empty{text-align:center;padding:56px 20px;color:var(--muted)}
@@ -443,7 +443,7 @@ tbody tr:hover td{background:var(--blue-l)}
 .week-day-btn:hover{border-color:var(--blue);color:var(--blue)}
 .week-day-btn.active{
   background:var(--blue);color:#fff;border-color:var(--blue);
-  box-shadow:0 2px 8px rgba(37,99,235,.3);
+  box-shadow:0 2px 8px rgba(22,163,74,.3);
 }
 .week-day-btn.has-plan:not(.active){border-color:var(--green);color:var(--green);background:var(--green-l)}
 .week-day-btn.is-today:not(.active){border-color:var(--blue-ll)}
@@ -595,7 +595,7 @@ tbody tr:hover td{background:var(--blue-l)}
 /* ─── Login screen ─── */
 #login-screen{
   display:none;position:fixed;inset:0;
-  background:linear-gradient(135deg,#0f1f5c 0%,#1e3a8a 40%,#1d4ed8 100%);
+  background:linear-gradient(135deg,#0a1628 0%,#0d1f2d 60%,#162535 100%);
   z-index:10000;align-items:center;justify-content:center;padding:20px;
 }
 #login-screen.open{display:flex}
@@ -606,11 +606,12 @@ tbody tr:hover td{background:var(--blue-l)}
   animation:modalIn .3s ease;
 }
 .login-logo{
-  width:68px;height:68px;border-radius:18px;
-  background:linear-gradient(135deg,#1e3a8a,#2563eb);
+  width:80px;height:80px;border-radius:16px;
+  background:#fff;border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;
   margin:0 auto 18px;
-  box-shadow:0 6px 20px rgba(37,99,235,.4);
+  box-shadow:0 4px 16px rgba(10,22,40,.15);
+  overflow:hidden;
 }
 .login-card h1{font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.5px}
 .login-card .login-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
@@ -625,7 +626,7 @@ tbody tr:hover td{background:var(--blue-l)}
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <img src="./logo-pp.png" alt="Logo" style="height:38px;object-fit:contain" onerror="this.parentElement.innerHTML='RM'">
+      <img src="./logo-pp.png" alt="Logo" style="height:66px;width:66px;object-fit:contain" onerror="this.parentElement.innerHTML='RM'">
     </div>
     <h1>RemisGest</h1>
     <p class="login-sub">Ingresá con tu cuenta para acceder</p>
@@ -649,7 +650,7 @@ tbody tr:hover td{background:var(--blue-l)}
 
 <header>
   <div class="logo-wrap">
-    <img src="./logo-pp.png" alt="Logo" style="height:26px;width:26px;object-fit:contain" onerror="this.parentElement.textContent='RM'">
+    <img src="./logo-pp.png" alt="Logo" style="height:36px;width:36px;object-fit:contain" onerror="this.parentElement.textContent='RM'">
   </div>
   <div>
     <h1>Gestión de Remises</h1>

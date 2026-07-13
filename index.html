@@ -76,7 +76,7 @@ header{
   overflow:hidden;
 }
 header h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
-header .sub{font-size:11px;color:rgba(255,255,255,.6);margin-left:auto;white-space:nowrap}
+header .sub{font-size:11px;color:rgba(255,255,255,.6);white-space:nowrap;display:block}
 
 /* ─── Nav ─── */
 nav{
@@ -701,13 +701,13 @@ tbody tr:hover td{background:var(--blue-l)}
   <div class="logo-wrap">
     <img src="./logo-pp.png" alt="Logo" style="height:36px;width:36px;object-fit:contain" onerror="this.parentElement.textContent='RM'">
   </div>
-  <div>
+  <div style="flex:1;min-width:0">
     <h1>Gestión de Remises</h1>
+    <span class="sub" style="font-size:11px;color:rgba(255,255,255,.6)">Polysan S.A. · Polcecal S.A.</span>
   </div>
-  <span class="sub">Polysan S.A. · Polcecal S.A.</span>
-  <div id="fb-logout-btn" style="display:none;align-items:center;gap:8px;margin-left:8px">
-    <span id="fb-user-info" style="font-size:11px;color:rgba(255,255,255,.7);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-    <button onclick="doLogout()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:11px;white-space:nowrap;font-weight:600">Salir</button>
+  <div id="fb-logout-btn" style="display:none;align-items:center;gap:8px;flex-shrink:0">
+    <span id="fb-user-info" style="font-size:11px;color:rgba(255,255,255,.7);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button onclick="doLogout()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 14px;border-radius:var(--r-sm);cursor:pointer;font-size:12px;white-space:nowrap;font-weight:600;min-height:36px">Salir</button>
   </div>
 </header>
 

@@ -6,7 +6,8 @@
       ".firebaserc",
       ".git",
       ".gitignore",
-      "node_modules"
+      "node_modules",
+      "functions"
     ],
     "rewrites": [
       {
@@ -29,5 +30,9 @@
         ]
       }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
   }
 }

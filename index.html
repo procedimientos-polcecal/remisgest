@@ -16,6 +16,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <style>
 /* ─── Reset ─── */
 *{box-sizing:border-box;margin:0;padding:0}
@@ -622,6 +623,27 @@ tbody tr:hover td{background:var(--blue-l)}
 </head>
 <body>
 
+<!-- ══════════════ VISTA EMPLEADO ══════════════ -->
+<div id="employee-screen" style="display:none;min-height:100vh;background:var(--bg)">
+  <header>
+    <div class="logo-wrap">
+      <img src="./logo-pp.png" alt="Logo" style="height:36px;width:36px;object-fit:contain" onerror="this.parentElement.textContent='RM'">
+    </div>
+    <div>
+      <div style="font-size:15px;font-weight:700">Gestión de Remises</div>
+      <div id="emp-view-name" style="font-size:11px;opacity:.7"></div>
+    </div>
+    <button onclick="doLogout()" style="margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">Salir</button>
+  </header>
+  <div style="padding:20px;max-width:600px;margin:0 auto">
+    <div class="pill-tabs" style="margin-bottom:16px">
+      <button class="active" onclick="empViewDay('tomorrow',this)">Mañana</button>
+      <button onclick="empViewDay('today',this)">Hoy</button>
+    </div>
+    <div id="emp-view-content"></div>
+  </div>
+</div>
+
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="login-screen">
   <div class="login-card">
@@ -870,6 +892,13 @@ tbody tr:hover td{background:var(--blue-l)}
     <div class="form-group">
       <label>Teléfono (opcional)</label>
       <input class="form-control" id="emp-phone" placeholder="Ej: 351-555-1234">
+    </div>
+    <div class="form-group">
+      <label>Email para notificaciones (opcional)</label>
+      <input class="form-control" id="emp-email" type="email" placeholder="empleado@gmail.com">
+      <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">
+        El empleado usará este email para ingresar a la app y recibir notificaciones.
+      </small>
     </div>
     <div class="form-group">
       <label>Turno habitual</label>
@@ -1162,7 +1191,10 @@ const FIREBASE_CONFIG = {
   appId:             "1:398145762684:web:8b0b9566e163319e2ee0f9"
 };
 const FB_ENABLED = FIREBASE_CONFIG.apiKey !== "CONFIGURE_ME";
+// VAPID key: Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
+const VAPID_KEY = 'REEMPLAZAR_CON_TU_VAPID_KEY';
 let fbAuth = null, fbDb = null, fbUser = null;
+let _empMode = false, _empAdminUid = null, _empEmpId = null, _empViewDay = 'tomorrow';
 
 // ═══════════════════════════════════════════════
 //  STATE
@@ -2390,6 +2422,7 @@ function openEmpModal(id) {
       document.getElementById('emp-name').value=e.name||'';
       document.getElementById('emp-addr').value=e.address||'';
       document.getElementById('emp-phone').value=e.phone||'';
+      document.getElementById('emp-email').value=e.email||'';
       document.getElementById('emp-active').checked=e.active!==false;
       shiftSel.value=e.defaultShiftId||'';
       if (e.lat) {
@@ -2404,6 +2437,7 @@ function openEmpModal(id) {
     document.getElementById('emp-name').value='';
     document.getElementById('emp-addr').value='';
     document.getElementById('emp-phone').value='';
+    document.getElementById('emp-email').value='';
     document.getElementById('emp-active').checked=true;
     shiftSel.value='';
   }
@@ -2414,6 +2448,7 @@ function saveEmployee() {
   const name=document.getElementById('emp-name').value.trim();
   const addr=document.getElementById('emp-addr').value.trim();
   const phone=document.getElementById('emp-phone').value.trim();
+  const email=(document.getElementById('emp-email').value.trim()).toLowerCase();
   const active=document.getElementById('emp-active').checked;
   const defaultShiftId=document.getElementById('emp-default-shift').value||null;
   const btn=document.getElementById('emp-geo-btn');
@@ -2422,15 +2457,30 @@ function saveEmployee() {
   if (!name) { toast('Ingresá el nombre'); return; }
   if (editEmpId) {
     const e=S.employees.find(x=>x.id===editEmpId);
-    if (e) { e.name=name;e.address=addr;e.phone=phone;e.active=active;e.defaultShiftId=defaultShiftId;if(lat){e.lat=lat;e.lng=lng;} }
+    if (e) {
+      const oldEmail=e.email||'';
+      e.name=name;e.address=addr;e.phone=phone;e.email=email;
+      e.active=active;e.defaultShiftId=defaultShiftId;
+      if(lat){e.lat=lat;e.lng=lng;}
+      if(FB_ENABLED&&fbDb&&fbUser) {
+        if(oldEmail&&oldEmail!==email) fbDb.collection('empAccounts').doc(oldEmail).delete();
+        if(email) fbDb.collection('empAccounts').doc(email).set({adminUid:fbUser.uid,empId:editEmpId,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+      }
+    }
   } else {
-    S.employees.push({id:uid(),name,address:addr,phone,active,lat,lng,defaultShiftId});
+    const newId=uid();
+    S.employees.push({id:newId,name,address:addr,phone,email,active,lat,lng,defaultShiftId});
+    if(FB_ENABLED&&fbDb&&fbUser&&email)
+      fbDb.collection('empAccounts').doc(email).set({adminUid:fbUser.uid,empId:newId,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
   }
   save(); closeModal('emp-modal'); renderEmployees(); renderAttendance();
-  toast(editEmpId?' Empleado actualizado':' Empleado agregado');
+  toast(editEmpId?'Empleado actualizado':'Empleado agregado');
 }
 function deleteEmployee(id) {
   if (!confirm('¿Eliminar este empleado?')) return;
+  const emp=S.employees.find(e=>e.id===id);
+  if(FB_ENABLED&&fbDb&&fbUser&&emp?.email)
+    fbDb.collection('empAccounts').doc(emp.email).delete();
   S.employees=S.employees.filter(e=>e.id!==id);
   save(); renderEmployees(); renderAttendance();
   toast('Empleado eliminado');
@@ -3372,19 +3422,40 @@ function initFirebase() {
     fbAuth.onAuthStateChanged(async user => {
       if (user) {
         fbUser = user;
-        await loadFromFirebase();
         loginScreen.classList.remove('open');
-        const logoutBtn = document.getElementById('fb-logout-btn');
-        if (logoutBtn) logoutBtn.style.display = 'flex';
-        document.getElementById('fb-user-info').textContent = user.email;
-        // Re-renderizar con datos sincronizados
-        currentShiftId = S.shifts[0]?.id || null;
-        weekShiftId    = S.shifts[0]?.id || null;
-        renderShiftBar(); renderWeekShiftBar();
-        renderAttendance(); renderEmployees(); renderVehicles(); loadSavedRoutes();
+
+        // Detectar rol: ¿es empleado o admin?
+        const empSnap = await fbDb.collection('empAccounts').doc(user.email.toLowerCase()).get();
+        if (empSnap.exists) {
+          // ── MODO EMPLEADO ──
+          _empMode = true;
+          const { adminUid, empId } = empSnap.data();
+          _empAdminUid = adminUid; _empEmpId = empId;
+          // Registrar UID para que el Cloud Function pueda enviarle notificaciones
+          fbDb.collection('empAccounts').doc(user.email.toLowerCase()).set(
+            { uid: user.uid }, { merge: true }
+          );
+          document.getElementById('employee-screen').style.display = '';
+          initFCM();
+          await renderEmployeeView();
+        } else {
+          // ── MODO ADMIN ──
+          _empMode = false;
+          await loadFromFirebase();
+          const logoutBtn = document.getElementById('fb-logout-btn');
+          if (logoutBtn) logoutBtn.style.display = 'flex';
+          document.getElementById('fb-user-info').textContent = user.email;
+          currentShiftId = S.shifts[0]?.id || null;
+          weekShiftId    = S.shifts[0]?.id || null;
+          renderShiftBar(); renderWeekShiftBar();
+          renderAttendance(); renderEmployees(); renderVehicles(); loadSavedRoutes();
+          initFCM();
+        }
       } else {
-        // Confirmado: no hay sesión activa → mostrar login
+        // Confirmado: no hay sesión → mostrar login
         fbUser = null;
+        _empMode = false;
+        document.getElementById('employee-screen').style.display = 'none';
         loginScreen.classList.add('open');
         const logoutBtn = document.getElementById('fb-logout-btn');
         if (logoutBtn) logoutBtn.style.display = 'none';
@@ -3423,7 +3494,129 @@ async function doLogin() {
 }
 
 async function doLogout() {
-  if (FB_ENABLED && fbAuth) await fbAuth.signOut();
+  if (FB_ENABLED && fbAuth) {
+    // Limpiar token FCM antes de cerrar sesión
+    if (fbDb && fbUser) {
+      try { await fbDb.collection('fcmTokens').doc(fbUser.uid).delete(); } catch(e){}
+    }
+    await fbAuth.signOut();
+  }
+  document.getElementById('employee-screen').style.display = 'none';
+}
+
+// ── FCM: pedir permiso y guardar token ──────────────────────────────────────
+async function initFCM() {
+  if (!FB_ENABLED || !fbUser || !('Notification' in window)) return;
+  try {
+    const messaging = firebase.messaging();
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+    if (token && fbDb) {
+      await fbDb.collection('fcmTokens').doc(fbUser.uid).set({
+        token, email: fbUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  } catch(e) { console.warn('FCM init error:', e); }
+}
+
+// ── VISTA EMPLEADO ───────────────────────────────────────────────────────────
+function empViewDay(day, btn) {
+  _empViewDay = day;
+  document.querySelectorAll('#employee-screen .pill-tabs button')
+    .forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderEmployeeView();
+}
+
+async function renderEmployeeView() {
+  if (!_empAdminUid || !_empEmpId || !fbDb) return;
+  const content = document.getElementById('emp-view-content');
+  content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px 0">Cargando...</p>';
+
+  try {
+    const orgSnap = await fbDb.collection('orgs').doc(_empAdminUid).get();
+    if (!orgSnap.exists) { content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px 0">Sin datos</p>'; return; }
+    const orgData = JSON.parse(orgSnap.data().state);
+    const emp = orgData.employees?.find(e => e.id === _empEmpId);
+    if (emp) document.getElementById('emp-view-name').textContent = emp.name;
+
+    // Calcular fecha objetivo
+    const today = new Date(); today.setHours(0,0,0,0);
+    const target = new Date(today);
+    if (_empViewDay === 'tomorrow') target.setDate(target.getDate() + 1);
+    const iso = target.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Buscar remises asignados a este empleado en esa fecha
+    const myRoutes = [];
+    const routesForDay = Object.entries(orgData.routes || {})
+      .filter(([key]) => key.startsWith(iso + '__'));
+
+    for (const [key, routeList] of routesForDay) {
+      const shiftId = key.split('__')[1];
+      const shift = orgData.shifts?.find(s => s.id === shiftId);
+      if (!Array.isArray(routeList)) continue;
+      for (const route of routeList) {
+        if (!Array.isArray(route.seats)) continue;
+        const mySeat = route.seats.find(s => s.empId === _empEmpId);
+        if (mySeat) {
+          myRoutes.push({ shift, route, seat: mySeat });
+        }
+      }
+    }
+
+    if (!myRoutes.length) {
+      const label = _empViewDay === 'tomorrow' ? 'mañana' : 'hoy';
+      content.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--muted)">
+        <div style="font-size:40px;margin-bottom:12px">🚗</div>
+        <div>No tenés remis asignado para ${label}</div>
+      </div>`;
+      return;
+    }
+
+    const fmtDate = d => {
+      const [y,m,day] = d.split('-');
+      return `${day}/${m}/${y}`;
+    };
+    const html = myRoutes.map(({shift, route, seat}) => {
+      const passengers = route.seats
+        .filter(s => s.empId)
+        .map(s => {
+          const e = orgData.employees?.find(x => x.id === s.empId);
+          return e ? `<li style="padding:4px 0;border-bottom:1px solid var(--border)">${e.name}${e.address ? ' — <span style="color:var(--muted);font-size:12px">'+e.address+'</span>' : ''}</li>` : '';
+        }).join('');
+
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-xl);padding:16px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="background:var(--blue-l);color:var(--blue-d);padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700">${shift?.name || 'Turno'}</span>
+          <span style="font-size:13px;color:var(--muted)">${fmtDate(iso)}</span>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Remis</div>
+          <div style="font-weight:700;font-size:16px">🚗 ${route.vehicle?.name || '—'}</div>
+          ${route.vehicle?.driver ? `<div style="font-size:13px;color:var(--muted)">Conductor: ${route.vehicle.driver}</div>` : ''}
+        </div>
+        ${route.departureTime ? `<div style="margin-bottom:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Hora de búsqueda</div>
+          <div style="font-weight:600;font-size:15px">⏰ ${route.departureTime}</div>
+        </div>` : ''}
+        ${seat.address || (orgData.employees?.find(x=>x.id===_empEmpId)?.address) ? `<div style="margin-bottom:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Tu dirección</div>
+          <div style="font-size:14px">📍 ${seat.address || orgData.employees?.find(x=>x.id===_empEmpId)?.address || ''}</div>
+        </div>` : ''}
+        ${passengers ? `<div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Pasajeros del remis</div>
+          <ul style="list-style:none;padding:0;margin:0;font-size:13px">${passengers}</ul>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+
+    content.innerHTML = html;
+  } catch(e) {
+    console.warn('renderEmployeeView error:', e);
+    content.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px 0">Error al cargar datos</p>';
+  }
 }
 
 async function loadFromFirebase() {

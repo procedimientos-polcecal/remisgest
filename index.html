@@ -548,6 +548,10 @@ tbody tr:hover td{background:var(--blue-l)}
 
 /* ─── Controls actions group ─── */
 .controls-actions{display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0;flex-wrap:wrap}
+/* Ocultar elementos que requieren auth hasta que Firebase confirme sesión */
+.auth-hidden{display:none!important}
+/* Nav logout - visible solo cuando hay sesión */
+#nav-logout{display:none;margin-left:auto;color:var(--red)!important;border-bottom-color:transparent!important}
 
 /* ─── Responsive ─── */
 @media(max-width:768px){
@@ -705,7 +709,7 @@ tbody tr:hover td{background:var(--blue-l)}
     <h1>Gestión de Remises</h1>
     <span class="sub" style="font-size:11px;color:rgba(255,255,255,.6)">Polysan S.A. · Polcecal S.A.</span>
   </div>
-  <div id="fb-logout-btn" style="display:none;align-items:center;gap:8px;flex-shrink:0">
+  <div id="fb-logout-btn" class="auth-hidden" style="display:flex;align-items:center;gap:8px;flex-shrink:0">
     <span id="fb-user-info" style="font-size:11px;color:rgba(255,255,255,.7);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
     <button onclick="doLogout()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 14px;border-radius:var(--r-sm);cursor:pointer;font-size:12px;white-space:nowrap;font-weight:600;min-height:36px">Salir</button>
   </div>
@@ -717,6 +721,7 @@ tbody tr:hover td{background:var(--blue-l)}
   <button onclick="showTab('empleados')" id="nav-empleados">Empleados</button>
   <button onclick="showTab('vehiculos')" id="nav-vehiculos">Vehículos</button>
   <button onclick="showTab('config')" id="nav-config">Configuración</button>
+  <button onclick="doLogout()" id="nav-logout">Salir</button>
   <button onclick="showTab('historial')" id="nav-historial">Historial</button>
 </nav>
 
@@ -3538,8 +3543,8 @@ function initFirebase() {
           // ── MODO ADMIN ──
           _empMode = false;
           await loadFromFirebase();
-          const logoutBtn = document.getElementById('fb-logout-btn');
-          if (logoutBtn) logoutBtn.style.display = 'flex';
+          document.getElementById('fb-logout-btn').classList.remove('auth-hidden');
+          document.getElementById('nav-logout').style.display = 'block';
           document.getElementById('fb-user-info').textContent = user.email;
           currentShiftId = S.shifts[0]?.id || null;
           weekShiftId    = S.shifts[0]?.id || null;
@@ -3553,8 +3558,8 @@ function initFirebase() {
         _empMode = false;
         document.getElementById('employee-screen').style.display = 'none';
         loginScreen.classList.add('open');
-        const logoutBtn = document.getElementById('fb-logout-btn');
-        if (logoutBtn) logoutBtn.style.display = 'none';
+        document.getElementById('fb-logout-btn').classList.add('auth-hidden');
+        document.getElementById('nav-logout').style.display = 'none';
       }
     });
   } catch(e) {

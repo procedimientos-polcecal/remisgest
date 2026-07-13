@@ -551,7 +551,7 @@ tbody tr:hover td{background:var(--blue-l)}
 /* Ocultar elementos que requieren auth hasta que Firebase confirme sesión */
 .auth-hidden{display:none!important}
 /* Nav logout - visible solo cuando hay sesión */
-#nav-logout{display:none;margin-left:auto;color:var(--red)!important;border-bottom-color:transparent!important}
+#nav-logout{display:none;color:var(--red)!important;border-bottom-color:transparent!important}
 
 /* ─── Responsive ─── */
 @media(max-width:768px){
@@ -875,6 +875,11 @@ tbody tr:hover td{background:var(--blue-l)}
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Cada turno tiene su propia asistencia y rutas de ida/vuelta independientes.</p>
     <div id="cfg-shifts-list"></div>
     <button class="btn btn-ghost" onclick="openAddShiftModal()">+ Agregar turno</button>
+    <br><br>
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px" id="cfg-user-email"></div>
+      <button class="btn btn-danger" onclick="doLogout()" style="width:100%;justify-content:center">Cerrar sesión</button>
+    </div>
   </div>
 </div>
 
@@ -3539,11 +3544,15 @@ function initFirebase() {
         loginScreen.classList.remove('open');
 
         // Detectar rol: ¿es empleado o admin?
-        const empSnap = await fbDb.collection('empAccounts').doc(user.email.toLowerCase()).get();
-        if (empSnap.exists) {
+        let isEmp = false, empAdminUid = null, empEmpId = null;
+        try {
+          const empSnap = await fbDb.collection('empAccounts').doc(user.email.toLowerCase()).get();
+          if (empSnap.exists) { isEmp = true; const d = empSnap.data(); empAdminUid = d.adminUid; empEmpId = d.empId; }
+        } catch(e) { console.warn('empAccounts check failed, defaulting to admin:', e); }
+        if (isEmp) {
           // ── MODO EMPLEADO ──
           _empMode = true;
-          const { adminUid, empId } = empSnap.data();
+          const adminUid = empAdminUid, empId = empEmpId;
           _empAdminUid = adminUid; _empEmpId = empId;
           // Ocultar toda la interfaz del admin
           document.getElementById('main-header').style.display = 'none';
@@ -3563,6 +3572,7 @@ function initFirebase() {
           document.getElementById('fb-logout-btn').classList.remove('auth-hidden');
           document.getElementById('nav-logout').style.display = 'block';
           document.getElementById('fb-user-info').textContent = user.email;
+          document.getElementById('cfg-user-email').textContent = 'Sesión iniciada como: ' + user.email;
           currentShiftId = S.shifts[0]?.id || null;
           weekShiftId    = S.shifts[0]?.id || null;
           renderShiftBar(); renderWeekShiftBar();

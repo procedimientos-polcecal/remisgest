@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestión de Remises – Polysan / Polcecal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d4ed8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RemisGest">
+<link rel="apple-touch-icon" href="logo-pp.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -531,14 +537,59 @@ tbody tr:hover td{background:var(--blue-l)}
 
 /* ─── Responsive ─── */
 @media(max-width:768px){
-  header{padding:0 16px;height:54px}
-  .tab{padding:14px 16px}
-  .hoy-layout{grid-template-columns:1fr}
-  .map-wrap{min-height:300px}
-  #map{min-height:300px}
+  header{padding:0 14px;height:54px}
+  header .sub{display:none}
+  nav{top:54px;padding:0 6px}
+  nav button{padding:12px 12px 10px;font-size:12px}
+  .tab{padding:14px 12px}
+  .hoy-layout{grid-template-columns:1fr;gap:10px}
+  .left-panel{max-height:none;overflow-y:visible}
+  .map-wrap{min-height:280px}
+  #map{min-height:280px}
   .week-detail{grid-template-columns:1fr}
-  nav button{padding:12px 14px;font-size:12px}
   .controls{padding:8px 10px;gap:6px}
+}
+@keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:none;opacity:1}}
+@media(max-width:480px){
+  /* Header */
+  header{height:50px;padding:0 10px}
+  header h1{font-size:14px}
+  .logo-wrap{width:30px;height:30px;border-radius:8px}
+  #fb-user-info{display:none}
+  nav{top:50px;padding:0 2px}
+  nav button{padding:10px 9px 8px;font-size:11px}
+  /* Layout */
+  .tab{padding:10px 8px}
+  .map-wrap{min-height:230px}
+  #map{min-height:230px}
+  /* Buttons — touch targets más grandes */
+  .btn{min-height:40px;font-size:13px}
+  .btn-sm{min-height:36px;font-size:12px;padding:6px 10px}
+  /* Controls */
+  .controls{flex-wrap:wrap}
+  .shift-bar{gap:5px}
+  /* Route cards */
+  .route-header{padding:10px 12px;gap:8px}
+  .route-header h3{font-size:13px}
+  .route-stats{justify-content:flex-start}
+  .stops-list{padding:8px 10px}
+  .stat-chip{font-size:10px;padding:3px 6px}
+  /* Vehicle cards */
+  .v-card{padding:12px}
+  .v-card-actions{flex-wrap:wrap}
+  /* Modals — bottom sheet en celular */
+  .overlay{align-items:flex-end;padding:0}
+  .modal{
+    width:100%;max-width:100%;
+    border-radius:var(--r-xl) var(--r-xl) 0 0;
+    max-height:90vh;padding:20px 16px 30px;
+    animation:slideUp .22s ease;
+  }
+  .modal h2{font-size:15px;margin-bottom:14px}
+  .modal-footer{flex-direction:column-reverse;gap:8px}
+  .modal-footer .btn{justify-content:center;width:100%;min-height:44px}
+  /* Login */
+  .login-card{padding:28px 18px 24px}
 }
 
 /* ─── Login screen ─── */
@@ -3550,6 +3601,10 @@ function init() {
   initFirebase();
 }
 document.addEventListener('DOMContentLoaded', init);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+}
 </script>
 </body>
 </html>

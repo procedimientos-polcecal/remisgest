@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestión de Remises – Polysan / Polcecal</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1d4ed8">
+<meta name="theme-color" content="#0a1628">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Gestión de Remises">
@@ -19,7 +19,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <style>
 /* ─── Reset ─── */
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 
 /* ─── Design tokens ─── */
 :root{
@@ -49,15 +49,24 @@ body{
   background:var(--bg);color:var(--text);
   min-height:100vh;line-height:1.5;
   -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  overscroll-behavior-y:contain;
 }
+button,a,[role=button]{touch-action:manipulation}
 
 /* ─── Header ─── */
 header{
   background:linear-gradient(135deg,#0a1628 0%,#0d1f2d 60%,#162535 100%);
-  color:#fff;height:60px;
-  display:flex;align-items:center;gap:14px;padding:0 24px;
+  color:#fff;
+  display:flex;align-items:center;gap:14px;
+  padding:env(safe-area-inset-top) 24px 0;
+  height:calc(60px + env(safe-area-inset-top));
   box-shadow:0 2px 16px rgba(10,22,40,.55);
   position:sticky;top:0;z-index:200;
+}
+/* Fallback sin safe-area */
+@supports not (padding: env(safe-area-inset-top)){
+  header{height:60px;padding:0 24px}
 }
 .logo-wrap{
   width:44px;height:44px;border-radius:10px;
@@ -73,7 +82,8 @@ header .sub{font-size:11px;color:rgba(255,255,255,.6);margin-left:auto;white-spa
 nav{
   background:#fff;border-bottom:1px solid var(--border);
   display:flex;padding:0 20px;overflow-x:auto;
-  box-shadow:var(--s1);position:sticky;top:60px;z-index:199;
+  box-shadow:var(--s1);position:sticky;
+  top:calc(60px + env(safe-area-inset-top));z-index:199;
 }
 nav::-webkit-scrollbar{height:0}
 nav button{
@@ -536,45 +546,62 @@ tbody tr:hover td{background:var(--blue-l)}
   .route-header{background:#f8fafc!important}
 }
 
+/* ─── Controls actions group ─── */
+.controls-actions{display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0;flex-wrap:wrap}
+
 /* ─── Responsive ─── */
 @media(max-width:768px){
-  header{padding:0 14px;height:54px}
+  header{
+    padding:env(safe-area-inset-top) 14px 0;
+    height:calc(54px + env(safe-area-inset-top));
+  }
   header .sub{display:none}
-  nav{top:54px;padding:0 6px}
+  nav{top:calc(54px + env(safe-area-inset-top));padding:0 6px}
   nav button{padding:12px 12px 10px;font-size:12px}
   .tab{padding:14px 12px}
   .hoy-layout{grid-template-columns:1fr;gap:10px}
   .left-panel{max-height:none;overflow-y:visible}
-  .map-wrap{min-height:280px}
-  #map{min-height:280px}
+  .map-wrap{min-height:260px}
+  #map{min-height:260px}
   .week-detail{grid-template-columns:1fr}
-  .controls{padding:8px 10px;gap:6px}
+  .controls{padding:8px 10px;gap:6px;display:grid;grid-template-columns:1fr 1fr}
+  .controls .date-input{grid-column:1/-1;width:100%}
+  .controls .btn-success,.controls .btn-amber{flex:1;justify-content:center}
+  .controls-actions{grid-column:1/-1;margin-left:0;justify-content:flex-start}
 }
 @keyframes slideUp{from{transform:translateY(50px);opacity:0}to{transform:none;opacity:1}}
 @media(max-width:480px){
   /* Header */
-  header{height:50px;padding:0 10px}
+  header{
+    padding:env(safe-area-inset-top) 10px 0;
+    height:calc(50px + env(safe-area-inset-top));
+  }
   header h1{font-size:14px}
   .logo-wrap{width:30px;height:30px;border-radius:8px}
   #fb-user-info{display:none}
-  nav{top:50px;padding:0 2px}
+  nav{top:calc(50px + env(safe-area-inset-top));padding:0 2px}
   nav button{padding:10px 9px 8px;font-size:11px}
   /* Layout */
   .tab{padding:10px 8px}
-  .map-wrap{min-height:230px}
-  #map{min-height:230px}
+  .map-wrap{min-height:220px}
+  #map{min-height:220px}
   /* Buttons — touch targets más grandes */
-  .btn{min-height:40px;font-size:13px}
-  .btn-sm{min-height:36px;font-size:12px;padding:6px 10px}
+  .btn{min-height:42px;font-size:13px}
+  .btn-sm{min-height:38px;font-size:12px;padding:6px 10px}
   /* Controls */
-  .controls{flex-wrap:wrap}
+  .controls{padding:8px}
   .shift-bar{gap:5px}
+  .shift-btn{padding:5px 10px;font-size:12px}
+  /* Ocultar botones secundarios en pantallas muy chicas */
+  .controls-actions .btn-ghost{display:none}
   /* Route cards */
   .route-header{padding:10px 12px;gap:8px}
   .route-header h3{font-size:13px}
   .route-stats{justify-content:flex-start}
   .stops-list{padding:8px 10px}
   .stat-chip{font-size:10px;padding:3px 6px}
+  /* Attendance list */
+  .att-addr{display:none}
   /* Vehicle cards */
   .v-card{padding:12px}
   .v-card-actions{flex-wrap:wrap}
@@ -583,7 +610,7 @@ tbody tr:hover td{background:var(--blue-l)}
   .modal{
     width:100%;max-width:100%;
     border-radius:var(--r-xl) var(--r-xl) 0 0;
-    max-height:90vh;padding:20px 16px 30px;
+    max-height:92vh;padding:20px 16px calc(30px + env(safe-area-inset-bottom));
     animation:slideUp .22s ease;
   }
   .modal h2{font-size:15px;margin-bottom:14px}
@@ -700,7 +727,7 @@ tbody tr:hover td{background:var(--blue-l)}
     <input type="date" id="route-date" class="date-input" onchange="onDateChange()">
     <button class="btn btn-success" onclick="generateRoutes('morning')">Generar Ida</button>
     <button class="btn btn-amber" onclick="generateRoutes('evening')">Generar Vuelta</button>
-    <div style="display:flex;gap:6px;align-items:center;margin-left:auto;flex-shrink:0">
+    <div class="controls-actions">
       <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('morning')"> Ida</button>
       <button class="btn btn-whatsapp btn-sm" onclick="openShareDay('evening')"> Vuelta</button>
       <button class="btn btn-ghost btn-sm" onclick="openExportModal()" title="Exportar a planilla">Exportar</button>

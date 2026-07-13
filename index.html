@@ -2556,22 +2556,25 @@ function saveEmployee() {
 }
 
 async function createEmpAuthAccount(email, password, empId) {
-  // Crear cuenta en app secundaria para no cerrar sesión del admin
-  const secondApp = firebase.initializeApp(FIREBASE_CONFIG, 'emp-' + Date.now());
-  try {
-    const secondAuth = secondApp.auth();
-    const cred = await secondAuth.createUserWithEmailAndPassword(email, password);
-    const empUid = cred.user.uid;
-    await secondAuth.signOut();
-    // Registrar en Firestore
-    if(fbDb&&fbUser) {
-      await fbDb.collection('empAccounts').doc(email).set({
-        adminUid:fbUser.uid, empId, uid:empUid,
-        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }
-  } finally {
-    secondApp.delete();
+  // Usar la REST API de Firebase Auth directamente — no afecta la sesión del admin
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_CONFIG.apiKey}`,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password, returnSecureToken: false }) }
+  );
+  const data = await res.json();
+  if (data.error) {
+    const code = data.error.message;
+    if (code === 'EMAIL_EXISTS') throw Object.assign(new Error(code), {code:'auth/email-already-in-use'});
+    throw new Error(code);
+  }
+  const empUid = data.localId;
+  // Registrar en Firestore
+  if(fbDb&&fbUser) {
+    await fbDb.collection('empAccounts').doc(email).set({
+      adminUid:fbUser.uid, empId, uid:empUid,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
   }
 }
 
